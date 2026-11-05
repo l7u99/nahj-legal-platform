@@ -1,7 +1,6 @@
-
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { db, ready } from './lib';
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { db, ready } from './lib'
 
 function Header() {
   return (
@@ -10,7 +9,12 @@ function Header() {
         <img
           src={`${import.meta.env.BASE_URL}nahj-logo.png`}
           alt="شعار نهج القانوني"
-          className="brand-logo"
+          style={{
+            width: '76px',
+            height: '76px',
+            objectFit: 'contain',
+            borderRadius: '12px'
+          }}
         />
         <span>
           نهج القانوني
@@ -24,7 +28,7 @@ function Header() {
         <Link to="/admin">دخول المسؤولين</Link>
       </nav>
     </header>
-  );
+  )
 }
 
 function Shell({ children }) {
@@ -34,7 +38,7 @@ function Shell({ children }) {
       {children}
       <footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
     </div>
-  );
+  )
 }
 
 function Hero({ title, desc }) {
@@ -44,18 +48,18 @@ function Hero({ title, desc }) {
       <h1>{title}</h1>
       <p>{desc}</p>
     </section>
-  );
+  )
 }
 
 function Note({ children }) {
-  return <div className="note">{children}</div>;
+  return <div className="note">{children}</div>
 }
 
 function Home() {
-  const [questionSet, setQuestionSet] = useState(null);
+  const [questionSet, setQuestionSet] = useState(null)
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) return
 
     db.from('question_sets')
       .select('id,title,description')
@@ -63,8 +67,8 @@ function Home() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-      .then(({ data }) => setQuestionSet(data));
-  }, []);
+      .then(({ data }) => setQuestionSet(data))
+  }, [])
 
   return (
     <Shell>
@@ -77,7 +81,9 @@ function Home() {
         <div className="cols">
           <section className="card">
             <small className="gold">التحدّي القانوني الأسبوعي</small>
+
             <h2>معرفةٌ تُبنى بسؤال، وثقافةٌ تنمو بالممارسة.</h2>
+
             <p>
               اختبر معلوماتك القانونية من خلال أسئلة مختارة،
               مع تفسير للإجابة ومصدرها النظامي.
@@ -92,6 +98,7 @@ function Home() {
 
           <section className="card center">
             <div className="seal">⚖</div>
+
             <h2>هل أنت مستعد للتحدّي؟</h2>
 
             {!ready ? (
@@ -101,7 +108,10 @@ function Home() {
             ) : questionSet ? (
               <>
                 <p>{questionSet.title}</p>
-                <Link className="btn" to={`/participate/${questionSet.id}`}>
+                <Link
+                  className="btn"
+                  to={`/participate/${questionSet.id}`}
+                >
                   ابدأ المشاركة ←
                 </Link>
               </>
@@ -109,26 +119,28 @@ function Home() {
               <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>
             )}
 
-            <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
+            <small className="muted">
+              بيانات المشاركة لا تظهر للعامة.
+            </small>
           </section>
         </div>
       </main>
     </Shell>
-  );
+  )
 }
 
 function Leaders() {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState([])
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) return
 
     db.from('weekly_leaderboard')
       .select('display_name,score')
       .order('score', { ascending: false })
       .limit(10)
-      .then(({ data }) => setRows(data || []));
-  }, []);
+      .then(({ data }) => setRows(data || []))
+  }, [])
 
   return (
     <Shell>
@@ -156,27 +168,27 @@ function Leaders() {
         </section>
       </main>
     </Shell>
-  );
+  )
 }
 
 function Participate() {
-  const { id } = useParams();
+  const { id } = useParams()
 
-  const [questionSet, setQuestionSet] = useState(null);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [step, setStep] = useState(0);
-  const [phase, setPhase] = useState('loading');
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
+  const [setData, setSetData] = useState(null)
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [questions, setQuestions] = useState([])
+  const [answers, setAnswers] = useState({})
+  const [step, setStep] = useState(0)
+  const [phase, setPhase] = useState('loading')
+  const [result, setResult] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     if (!ready) {
-      setError('المنصة غير مربوطة بعد.');
-      setPhase('error');
-      return;
+      setErrorMessage('المنصة غير مربوطة بعد.')
+      setPhase('error')
+      return
     }
 
     db.from('question_sets')
@@ -197,53 +209,54 @@ function Participate() {
       .eq('id', id)
       .eq('status', 'published')
       .maybeSingle()
-      .then(({ data, error: fetchError }) => {
-        if (fetchError || !data) {
-          setError('المسابقة غير متاحة حاليًا.');
-          setPhase('error');
-          return;
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setErrorMessage('المسابقة غير متاحة.')
+          setPhase('error')
+          return
         }
 
-        data.questions.sort((a, b) => a.position - b.position);
+        const sortedQuestions = (data.questions || [])
+          .sort((a, b) => a.position - b.position)
 
-        data.questions.forEach((question) => {
-          question.options.sort((a, b) => a.position - b.position);
-        });
+        sortedQuestions.forEach(question => {
+          question.options.sort((a, b) => a.position - b.position)
+        })
 
-        setQuestionSet(data);
-        setQuestions(data.questions);
-        setPhase('identity');
-      });
-  }, [id]);
+        setSetData(data)
+        setQuestions(sortedQuestions)
+        setPhase('identity')
+      })
+  }, [id])
 
-  async function submit() {
+  async function submitAnswers() {
     if (Object.keys(answers).length !== questions.length) {
-      setError('أجب عن جميع الأسئلة أولًا.');
-      return;
+      setErrorMessage('أجب عن جميع الأسئلة.')
+      return
     }
 
-    const { data, error: submitError } = await db.functions.invoke(
+    const { data, error } = await db.functions.invoke(
       'submit-participation',
       {
         body: {
           p_name: name,
           p_phone: phone,
           set_id: id,
-          answers: questions.map((question) => ({
+          answers: questions.map(question => ({
             question_id: question.id,
-            option_id: answers[question.id],
-          })),
-        },
+            option_id: answers[question.id]
+          }))
+        }
       }
-    );
+    )
 
-    if (submitError || !data?.result) {
-      setError('تعذّر اعتماد المشاركة. حاول مرة أخرى.');
-      return;
+    if (error || !data?.result) {
+      setErrorMessage('تعذر اعتماد المشاركة.')
+      return
     }
 
-    setResult(data.result);
-    setPhase('result');
+    setResult(data.result)
+    setPhase('result')
   }
 
   return (
@@ -251,14 +264,16 @@ function Participate() {
       <main className="narrow">
         <Hero
           title="التحدّي القانوني"
-          desc={questionSet?.title || 'مشاركة أسبوعية'}
+          desc={setData?.title || 'مشاركة أسبوعية'}
         />
 
         {phase === 'loading' && (
-          <section className="card">جارٍ تحميل الأسئلة…</section>
+          <section className="card">جارٍ التحميل…</section>
         )}
 
-        {phase === 'error' && <Note>{error}</Note>}
+        {phase === 'error' && (
+          <Note>{errorMessage}</Note>
+        )}
 
         {phase === 'identity' && (
           <section className="card form">
@@ -266,8 +281,7 @@ function Participate() {
               الاسم الثلاثي
               <input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="أدخل اسمك الثلاثي"
+                onChange={event => setName(event.target.value)}
               />
             </label>
 
@@ -276,25 +290,25 @@ function Participate() {
               <input
                 value={phone}
                 maxLength="10"
-                onChange={(event) =>
+                onChange={event =>
                   setPhone(event.target.value.replace(/\D/g, ''))
                 }
                 placeholder="05XXXXXXXX"
               />
             </label>
 
-            {error && <Note>{error}</Note>}
+            {errorMessage && <Note>{errorMessage}</Note>}
 
             <button
               className="btn"
               onClick={() => {
                 if (name.trim().length < 5 || !/^05\d{8}$/.test(phone)) {
-                  setError('تحقق من الاسم ورقم الجوال.');
-                  return;
+                  setErrorMessage('تحقق من الاسم ورقم الجوال.')
+                  return
                 }
 
-                setError('');
-                setPhase('quiz');
+                setErrorMessage('')
+                setPhase('quiz')
               }}
             >
               ابدأ الأسئلة ←
@@ -311,7 +325,7 @@ function Participate() {
             <div className="progress">
               <span
                 style={{
-                  width: `${((step + 1) / questions.length) * 100}%`,
+                  width: `${((step + 1) / questions.length) * 100}%`
                 }}
               />
             </div>
@@ -325,19 +339,18 @@ function Participate() {
                   (answers[questions[step].id] === option.id ? 'chosen' : '')
                 }
                 key={option.id}
-                onClick={() => {
+                onClick={() =>
                   setAnswers({
                     ...answers,
-                    [questions[step].id]: option.id,
-                  });
-                  setError('');
-                }}
+                    [questions[step].id]: option.id
+                  })
+                }
               >
                 {String.fromCharCode(65 + index)} · {option.label}
               </button>
             ))}
 
-            {error && <Note>{error}</Note>}
+            {errorMessage && <Note>{errorMessage}</Note>}
 
             <div className="actions">
               <button
@@ -353,18 +366,18 @@ function Participate() {
                   className="btn"
                   onClick={() => {
                     if (!answers[questions[step].id]) {
-                      setError('اختر إجابة أولًا.');
-                      return;
+                      setErrorMessage('اختر إجابة أولًا.')
+                      return
                     }
 
-                    setError('');
-                    setStep(step + 1);
+                    setErrorMessage('')
+                    setStep(step + 1)
                   }}
                 >
                   التالي
                 </button>
               ) : (
-                <button className="btn" onClick={submit}>
+                <button className="btn" onClick={submitAnswers}>
                   اعتماد الإجابات
                 </button>
               )}
@@ -372,7 +385,7 @@ function Participate() {
           </section>
         )}
 
-        {phase === 'result' && (
+        {phase === 'result' && result && (
           <section className="card center">
             <div className="score">
               {result.score} / {result.total}
@@ -383,137 +396,128 @@ function Participate() {
             {result.answer_details.map((detail, index) => (
               <article className="review" key={index}>
                 <b>
-                  السؤال {index + 1}: {detail.is_correct ? 'إجابة صحيحة' : 'إجابة غير صحيحة'}
+                  السؤال {index + 1}: {detail.is_correct ? 'صحيح' : 'غير صحيح'}
                 </b>
 
                 <p>{detail.question}</p>
                 <p>الإجابة الصحيحة: {detail.correct}</p>
                 <p>{detail.explanation}</p>
 
-                {detail.source_url && (
-                  <a href={detail.source_url} target="_blank" rel="noreferrer">
-                    المصدر الرسمي
-                  </a>
-                )}
+                <a
+                  href={detail.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  المصدر الرسمي
+                </a>
               </article>
             ))}
 
             <Link className="btn" to="/">
-              العودة للرئيسية
+              الرئيسية
             </Link>
           </section>
         )}
       </main>
     </Shell>
-  );
+  )
 }
 
 function Admin() {
-  const [session, setSession] = useState(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [sets, setSets] = useState([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [session, setSession] = useState(null)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [sets, setSets] = useState([])
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
 
   useEffect(() => {
-    if (!db) return;
+    if (!db) return
 
     db.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
+      setSession(data.session)
+    })
 
     const {
-      data: { subscription },
+      data: { subscription }
     } = db.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-    });
+      setSession(currentSession)
+    })
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function login(event) {
-    event.preventDefault();
-    setError('');
+    event.preventDefault()
+    setErrorMessage('')
 
-    const { data, error: loginError } = await db.functions.invoke(
-      'admin-login',
-      {
-        body: {
-          username,
-          password,
-        },
+    const { data, error } = await db.functions.invoke('admin-login', {
+      body: {
+        username,
+        password
       }
-    );
+    })
 
-    if (loginError || !data?.access_token) {
-      setError('تعذّر تسجيل الدخول. تحقق من بيانات الدخول وإعدادات المسؤول.');
-      return;
+    if (error || !data?.access_token) {
+      setErrorMessage('تعذر تسجيل الدخول؛ تحقق من بيانات الدخول وإعداد الدالة.')
+      return
     }
 
     const { error: sessionError } = await db.auth.setSession({
       access_token: data.access_token,
-      refresh_token: data.refresh_token,
-    });
+      refresh_token: data.refresh_token
+    })
 
     if (sessionError) {
-      setError('تعذّر إنشاء جلسة المسؤول.');
+      setErrorMessage('تعذر إنشاء جلسة المسؤول.')
     }
   }
 
   async function loadSets() {
-    const { data, error: loadError } = await db
+    const { data } = await db
       .from('question_sets')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
 
-    if (loadError) {
-      setError('تعذّر تحميل مجموعات الأسئلة.');
-      return;
-    }
-
-    setSets(data || []);
+    setSets(data || [])
   }
 
   useEffect(() => {
-    if (session) loadSets();
-  }, [session]);
+    if (session) loadSets()
+  }, [session])
 
   async function addSet(event) {
-    event.preventDefault();
-    setError('');
+    event.preventDefault()
 
-    const { error: insertError } = await db
-      .from('question_sets')
-      .insert({
-        title,
-        description,
-        status: 'draft',
-      });
+    const { error } = await db.from('question_sets').insert({
+      title,
+      description,
+      status: 'draft'
+    })
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
+    if (error) {
+      setErrorMessage(error.message)
+      return
     }
 
-    setTitle('');
-    setDescription('');
-    loadSets();
+    setTitle('')
+    setDescription('')
+    loadSets()
   }
 
   async function changeStatus(id, status) {
-    const { error: updateError } = await db
+    const { error } = await db
       .from('question_sets')
       .update({ status })
-      .eq('id', id);
+      .eq('id', id)
 
-    if (updateError) {
-      setError('تعذّر تحديث حالة مجموعة الأسئلة.');
-      return;
+    if (error) {
+      setErrorMessage(error.message)
+      return
     }
 
-    loadSets();
+    loadSets()
   }
 
   if (!ready) {
@@ -522,12 +526,12 @@ function Admin() {
         <main className="narrow">
           <Hero
             title="دخول المسؤولين"
-            desc="مساحة خاصة لإدارة المنصة."
+            desc="مساحة خاصة بالمسؤولين."
           />
           <Note>المنصة قيد الإعداد.</Note>
         </main>
       </Shell>
-    );
+    )
   }
 
   return (
@@ -544,7 +548,7 @@ function Admin() {
               اسم المستخدم
               <input
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={event => setUsername(event.target.value)}
                 required
               />
             </label>
@@ -554,48 +558,42 @@ function Admin() {
               <input
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={event => setPassword(event.target.value)}
                 required
               />
             </label>
 
-            {error && <Note>{error}</Note>}
+            {errorMessage && <Note>{errorMessage}</Note>}
 
-            <button className="btn" type="submit">
-              تسجيل الدخول
-            </button>
+            <button className="btn">تسجيل الدخول</button>
           </form>
         ) : (
           <>
             <form className="card form" onSubmit={addSet}>
-              <h2>إنشاء مجموعة أسئلة</h2>
+              <h2>إنشاء مجموعة أسئلة (مسودة)</h2>
 
               <label>
-                عنوان المجموعة
+                العنوان
                 <input
                   value={title}
-                  onChange={(event) => setTitle(event.target.value)}
+                  onChange={event => setTitle(event.target.value)}
                   required
                 />
               </label>
 
               <label>
-                وصف المجموعة
+                الوصف
                 <textarea
                   value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  onChange={event => setDescription(event.target.value)}
                 />
               </label>
 
-              {error && <Note>{error}</Note>}
-
-              <button className="btn" type="submit">
-                حفظ المسودة
-              </button>
+              <button className="btn">حفظ المسودة</button>
 
               <button
-                className="btn secondary"
                 type="button"
+                className="btn secondary"
                 onClick={() => db.auth.signOut()}
               >
                 تسجيل الخروج
@@ -605,7 +603,7 @@ function Admin() {
             <section className="card">
               <h2>مجموعات الأسئلة</h2>
 
-              {sets.map((set) => (
+              {sets.map(set => (
                 <div className="leader" key={set.id}>
                   <span>
                     {set.title} — {set.status}
@@ -629,15 +627,26 @@ function Admin() {
         )}
       </main>
     </Shell>
-  );
+  )
 }
 
 export default function App() {
-  const path = window.location.pathname;
+  const path = window.location.pathname.replace(
+    import.meta.env.BASE_URL,
+    '/'
+  )
 
-  if (path.startsWith('/participate/')) return <Participate />;
-  if (path === '/leaders') return <Leaders />;
-  if (path === '/admin') return <Admin />;
+  if (path.startsWith('/participate/')) {
+    return <Participate />
+  }
 
-  return <Home />;
+  if (path === '/leaders') {
+    return <Leaders />
+  }
+
+  if (path === '/admin') {
+    return <Admin />
+  }
+
+  return <Home />
 }
