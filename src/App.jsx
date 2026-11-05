@@ -3,18 +3,21 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { db, ready } from './lib';
 
-const brand = 'نهج القانوني';
-
 function Header() {
   return (
     <header>
       <Link to="/" className="brand">
-        <b>ن</b>
+        <img
+          src={`${import.meta.env.BASE_URL}nahj-logo.png`}
+          alt="شعار نهج القانوني"
+          className="brand-logo"
+        />
         <span>
           نهج القانوني
           <small>المعرفة القانونية تبدأ بسؤال</small>
         </span>
       </Link>
+
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/leaders">المتصدرون</Link>
@@ -49,18 +52,18 @@ function Note({ children }) {
 }
 
 function Home() {
-  const [s, setS] = useState(null);
+  const [questionSet, setQuestionSet] = useState(null);
 
   useEffect(() => {
-    if (ready) {
-      db.from('question_sets')
-        .select('id,title,description')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => setS(data));
-    }
+    if (!ready) return;
+
+    db.from('question_sets')
+      .select('id,title,description')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setQuestionSet(data));
   }, []);
 
   return (
@@ -79,6 +82,7 @@ function Home() {
               اختبر معلوماتك القانونية من خلال أسئلة مختارة،
               مع تفسير للإجابة ومصدرها النظامي.
             </p>
+
             <div className="chips">
               <span>أسئلة موثقة</span>
               <span>نتيجة فورية</span>
@@ -94,10 +98,10 @@ function Home() {
               <Note>
                 المنصة قيد التجهيز، وسيتم تفعيل المشاركة بعد ربط قاعدة البيانات.
               </Note>
-            ) : s ? (
+            ) : questionSet ? (
               <>
-                <p>{s.title}</p>
-                <Link className="btn" to={'/participate/' + s.id}>
+                <p>{questionSet.title}</p>
+                <Link className="btn" to={`/participate/${questionSet.id}`}>
                   ابدأ المشاركة ←
                 </Link>
               </>
@@ -105,9 +109,7 @@ function Home() {
               <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>
             )}
 
-            <small className="muted">
-              بيانات المشاركة لا تظهر للعامة.
-            </small>
+            <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
           </section>
         </div>
       </main>
@@ -119,13 +121,13 @@ function Leaders() {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    if (ready) {
-      db.from('weekly_leaderboard')
-        .select('display_name,score')
-        .order('score', { ascending: false })
-        .limit(10)
-        .then(({ data }) => setRows(data || []));
-    }
+    if (!ready) return;
+
+    db.from('weekly_leaderboard')
+      .select('display_name,score')
+      .order('score', { ascending: false })
+      .limit(10)
+      .then(({ data }) => setRows(data || []));
   }, []);
 
   return (
@@ -142,10 +144,10 @@ function Leaders() {
           {!ready ? (
             <Note>ستظهر القائمة بعد ربط قاعدة البيانات.</Note>
           ) : rows.length ? (
-            rows.map((r, i) => (
-              <div className="leader" key={i}>
-                <b>{i + 1}. {r.display_name}</b>
-                <strong>{r.score} / 3</strong>
+            rows.map((row, index) => (
+              <div className="leader" key={index}>
+                <b>{index + 1}. {row.display_name}</b>
+                <strong>{row.score} / 3</strong>
               </div>
             ))
           ) : (
@@ -160,67 +162,83 @@ function Leaders() {
 function Participate() {
   const { id } = useParams();
 
-  const [setS, setSData] = useState(null);
+  const [questionSet, setQuestionSet] = useState(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [qs, setQs] = useState([]);
-  const [ans, setAns] = useState({});
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState('loading');
   const [result, setResult] = useState(null);
-  const [err, setErr] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!ready) {
-      setErr('المنصة غير مربوطة بعد.');
+      setError('المنصة غير مربوطة بعد.');
       setPhase('error');
       return;
     }
 
     db.from('question_sets')
-      .select('id,title,questions(id,body,explanation,law_name,article_number,source_url,position,options(id,label,position))')
+      .select(`
+        id,
+        title,
+        questions(
+          id,
+          body,
+          explanation,
+          law_name,
+          article_number,
+          source_url,
+          position,
+          options(id,label,position)
+        )
+      `)
       .eq('id', id)
       .eq('status', 'published')
       .maybeSingle()
-      .then(({ data }) => {
-        if (!data) {
-          setErr('المسابقة غير متاحة.');
+      .then(({ data, error: fetchError }) => {
+        if (fetchError || !data) {
+          setError('المسابقة غير متاحة حاليًا.');
           setPhase('error');
           return;
         }
 
-        data.questions.sort((a, b) => a.position - b.position)
-          .forEach(q => q.options.sort((a, b) => a.position - b.position));
+        data.questions.sort((a, b) => a.position - b.position);
 
-        setSData(data);
-        setQs(data.questions);
+        data.questions.forEach((question) => {
+          question.options.sort((a, b) => a.position - b.position);
+        });
+
+        setQuestionSet(data);
+        setQuestions(data.questions);
         setPhase('identity');
       });
   }, [id]);
 
   async function submit() {
-    if (Object.keys(ans).length !== qs.length) {
-      setErr('أجب عن جميع الأسئلة.');
+    if (Object.keys(answers).length !== questions.length) {
+      setError('أجب عن جميع الأسئلة أولًا.');
       return;
     }
 
-    const { data, error } = await db.functions.invoke(
+    const { data, error: submitError } = await db.functions.invoke(
       'submit-participation',
       {
         body: {
           p_name: name,
           p_phone: phone,
           set_id: id,
-          answers: qs.map(q => ({
-            question_id: q.id,
-            option_id: ans[q.id]
-          }))
-        }
+          answers: questions.map((question) => ({
+            question_id: question.id,
+            option_id: answers[question.id],
+          })),
+        },
       }
     );
 
-    if (error || !data?.result) {
-      setErr('تعذر اعتماد المشاركة.');
+    if (submitError || !data?.result) {
+      setError('تعذّر اعتماد المشاركة. حاول مرة أخرى.');
       return;
     }
 
@@ -233,20 +251,23 @@ function Participate() {
       <main className="narrow">
         <Hero
           title="التحدّي القانوني"
-          desc={setS?.title || 'مشاركة أسبوعية'}
+          desc={questionSet?.title || 'مشاركة أسبوعية'}
         />
 
-        {phase === 'loading' ? (
-          <section className="card">جارٍ التحميل…</section>
-        ) : phase === 'error' ? (
-          <Note>{err}</Note>
-        ) : phase === 'identity' ? (
+        {phase === 'loading' && (
+          <section className="card">جارٍ تحميل الأسئلة…</section>
+        )}
+
+        {phase === 'error' && <Note>{error}</Note>}
+
+        {phase === 'identity' && (
           <section className="card form">
             <label>
               الاسم الثلاثي
               <input
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="أدخل اسمك الثلاثي"
               />
             </label>
 
@@ -255,56 +276,68 @@ function Participate() {
               <input
                 value={phone}
                 maxLength="10"
-                onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+                onChange={(event) =>
+                  setPhone(event.target.value.replace(/\D/g, ''))
+                }
                 placeholder="05XXXXXXXX"
               />
             </label>
 
-            {err && <Note>{err}</Note>}
+            {error && <Note>{error}</Note>}
 
             <button
               className="btn"
               onClick={() => {
                 if (name.trim().length < 5 || !/^05\d{8}$/.test(phone)) {
-                  setErr('تحقق من الاسم ورقم الجوال.');
+                  setError('تحقق من الاسم ورقم الجوال.');
                   return;
                 }
+
+                setError('');
                 setPhase('quiz');
               }}
             >
               ابدأ الأسئلة ←
             </button>
           </section>
-        ) : phase === 'quiz' ? (
+        )}
+
+        {phase === 'quiz' && (
           <section className="card">
-            <small>السؤال {step + 1} من {qs.length}</small>
+            <small>
+              السؤال {step + 1} من {questions.length}
+            </small>
 
             <div className="progress">
               <span
                 style={{
-                  width: ((step + 1) / qs.length * 100) + '%'
+                  width: `${((step + 1) / questions.length) * 100}%`,
                 }}
               />
             </div>
 
-            <h2>{qs[step]?.body}</h2>
+            <h2>{questions[step]?.body}</h2>
 
-            {qs[step]?.options.map((o, i) => (
+            {questions[step]?.options.map((option, index) => (
               <button
                 className={
                   'option ' +
-                  (ans[qs[step].id] === o.id ? 'chosen' : '')
+                  (answers[questions[step].id] === option.id ? 'chosen' : '')
                 }
-                key={o.id}
-                onClick={() =>
-                  setAns({ ...ans, [qs[step].id]: o.id })
-                }
+                key={option.id}
+                onClick={() => {
+                  setAnswers({
+                    ...answers,
+                    [questions[step].id]: option.id,
+                  });
+                  setError('');
+                }}
               >
-                {String.fromCharCode(65 + i)} · {o.label}
+                {String.fromCharCode(65 + index)} · {option.label}
               </button>
             ))}
 
-            {err && <Note>{err}</Note>}
+            {error && <Note>{error}</Note>}
 
             <div className="actions">
               <button
@@ -315,14 +348,18 @@ function Participate() {
                 السابق
               </button>
 
-              {step < qs.length - 1 ? (
+              {step < questions.length - 1 ? (
                 <button
                   className="btn"
-                  onClick={() =>
-                    ans[qs[step].id]
-                      ? setStep(step + 1)
-                      : setErr('اختر إجابة أولًا.')
-                  }
+                  onClick={() => {
+                    if (!answers[questions[step].id]) {
+                      setError('اختر إجابة أولًا.');
+                      return;
+                    }
+
+                    setError('');
+                    setStep(step + 1);
+                  }}
                 >
                   التالي
                 </button>
@@ -333,7 +370,9 @@ function Participate() {
               )}
             </div>
           </section>
-        ) : (
+        )}
+
+        {phase === 'result' && (
           <section className="card center">
             <div className="score">
               {result.score} / {result.total}
@@ -341,26 +380,26 @@ function Participate() {
 
             <h2>نتيجتك يا {name}</h2>
 
-            {result.answer_details.map((d, i) => (
-              <article className="review" key={i}>
+            {result.answer_details.map((detail, index) => (
+              <article className="review" key={index}>
                 <b>
-                  السؤال {i + 1}: {d.is_correct ? 'صحيح' : 'غير صحيح'}
+                  السؤال {index + 1}: {detail.is_correct ? 'إجابة صحيحة' : 'إجابة غير صحيحة'}
                 </b>
-                <p>{d.question}</p>
-                <p>الإجابة الصحيحة: {d.correct}</p>
-                <p>{d.explanation}</p>
-                <a
-                  href={d.source_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  المصدر الرسمي
-                </a>
+
+                <p>{detail.question}</p>
+                <p>الإجابة الصحيحة: {detail.correct}</p>
+                <p>{detail.explanation}</p>
+
+                {detail.source_url && (
+                  <a href={detail.source_url} target="_blank" rel="noreferrer">
+                    المصدر الرسمي
+                  </a>
+                )}
               </article>
             ))}
 
             <Link className="btn" to="/">
-              الرئيسية
+              العودة للرئيسية
             </Link>
           </section>
         )}
@@ -371,79 +410,110 @@ function Participate() {
 
 function Admin() {
   const [session, setSession] = useState(null);
-  const [u, setU] = useState('');
-  const [p, setP] = useState('');
-  const [err, setErr] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [sets, setSets] = useState([]);
   const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (!db) return;
 
-    db.auth.getSession().then(({ data }) => setSession(data.session));
+    db.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
 
     const {
-      data: { subscription }
-    } = db.auth.onAuthStateChange((_e, s) => setSession(s));
+      data: { subscription },
+    } = db.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  async function login(e) {
-    e.preventDefault();
-    setErr('');
+  async function login(event) {
+    event.preventDefault();
+    setError('');
 
-    const { data, error } = await db.functions.invoke('admin-login', {
-      body: { username: u, password: p }
-    });
+    const { data, error: loginError } = await db.functions.invoke(
+      'admin-login',
+      {
+        body: {
+          username,
+          password,
+        },
+      }
+    );
 
-    if (error || !data?.access_token) {
-      setErr('تعذر تسجيل الدخول؛ تحقق من بيانات الدخول وإعداد الدالة.');
+    if (loginError || !data?.access_token) {
+      setError('تعذّر تسجيل الدخول. تحقق من بيانات الدخول وإعدادات المسؤول.');
       return;
     }
 
-    const { error: se } = await db.auth.setSession({
+    const { error: sessionError } = await db.auth.setSession({
       access_token: data.access_token,
-      refresh_token: data.refresh_token
+      refresh_token: data.refresh_token,
     });
 
-    if (se) setErr('تعذر إنشاء جلسة المسؤول.');
+    if (sessionError) {
+      setError('تعذّر إنشاء جلسة المسؤول.');
+    }
   }
 
-  async function load() {
-    const { data } = await db.from('question_sets')
+  async function loadSets() {
+    const { data, error: loadError } = await db
+      .from('question_sets')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (loadError) {
+      setError('تعذّر تحميل مجموعات الأسئلة.');
+      return;
+    }
 
     setSets(data || []);
   }
 
   useEffect(() => {
-    if (session) load();
+    if (session) loadSets();
   }, [session]);
 
-  async function add(e) {
-    e.preventDefault();
+  async function addSet(event) {
+    event.preventDefault();
+    setError('');
 
-    const { error } = await db.from('question_sets').insert({
-      title,
-      description: desc,
-      status: 'draft'
-    });
+    const { error: insertError } = await db
+      .from('question_sets')
+      .insert({
+        title,
+        description,
+        status: 'draft',
+      });
 
-    if (error) {
-      setErr(error.message);
-    } else {
-      setTitle('');
-      setDesc('');
-      load();
+    if (insertError) {
+      setError(insertError.message);
+      return;
     }
+
+    setTitle('');
+    setDescription('');
+    loadSets();
   }
 
-  async function status(id, status) {
-    await db.from('question_sets').update({ status }).eq('id', id);
-    load();
+  async function changeStatus(id, status) {
+    const { error: updateError } = await db
+      .from('question_sets')
+      .update({ status })
+      .eq('id', id);
+
+    if (updateError) {
+      setError('تعذّر تحديث حالة مجموعة الأسئلة.');
+      return;
+    }
+
+    loadSets();
   }
 
   if (!ready) {
@@ -452,7 +522,7 @@ function Admin() {
         <main className="narrow">
           <Hero
             title="دخول المسؤولين"
-            desc="مساحة خاصة للمسؤولين."
+            desc="مساحة خاصة لإدارة المنصة."
           />
           <Note>المنصة قيد الإعداد.</Note>
         </main>
@@ -465,7 +535,7 @@ function Admin() {
       <main className="narrow">
         <Hero
           title="لوحة الإدارة"
-          desc="مساحة خاصة لإدارة دقيقة قانونية."
+          desc="مساحة خاصة بإدارة دقيقة قانونية."
         />
 
         {!session ? (
@@ -473,8 +543,8 @@ function Admin() {
             <label>
               اسم المستخدم
               <input
-                value={u}
-                onChange={e => setU(e.target.value)}
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
                 required
               />
             </label>
@@ -483,66 +553,74 @@ function Admin() {
               كلمة المرور
               <input
                 type="password"
-                value={p}
-                onChange={e => setP(e.target.value)}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 required
               />
             </label>
 
-            {err && <Note>{err}</Note>}
+            {error && <Note>{error}</Note>}
 
-            <button className="btn">تسجيل الدخول</button>
+            <button className="btn" type="submit">
+              تسجيل الدخول
+            </button>
           </form>
         ) : (
           <>
-            <section className="card form">
-              <h2>إنشاء مجموعة أسئلة (مسودة)</h2>
+            <form className="card form" onSubmit={addSet}>
+              <h2>إنشاء مجموعة أسئلة</h2>
 
               <label>
-                العنوان
+                عنوان المجموعة
                 <input
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
+                  onChange={(event) => setTitle(event.target.value)}
                   required
                 />
               </label>
 
               <label>
-                الوصف
+                وصف المجموعة
                 <textarea
-                  value={desc}
-                  onChange={e => setDesc(e.target.value)}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
                 />
               </label>
 
-              <button className="btn" onClick={e => add(e)}>
+              {error && <Note>{error}</Note>}
+
+              <button className="btn" type="submit">
                 حفظ المسودة
               </button>
 
               <button
                 className="btn secondary"
+                type="button"
                 onClick={() => db.auth.signOut()}
               >
                 تسجيل الخروج
               </button>
-            </section>
+            </form>
 
             <section className="card">
               <h2>مجموعات الأسئلة</h2>
 
-              {sets.map(s => (
-                <div className="leader" key={s.id}>
-                  <span>{s.title} — {s.status}</span>
+              {sets.map((set) => (
+                <div className="leader" key={set.id}>
+                  <span>
+                    {set.title} — {set.status}
+                  </span>
+
                   <button
                     className="mini"
                     onClick={() =>
-                      status(
-                        s.id,
-                        s.status === 'published' ? 'archived' : 'published'
+                      changeStatus(
+                        set.id,
+                        set.status === 'published' ? 'archived' : 'published'
                       )
                     }
                   >
-                    {s.status === 'published' ? 'أرشفة' : 'نشر'}
+                    {set.status === 'published' ? 'أرشفة' : 'نشر'}
                   </button>
                 </div>
               ))}
@@ -555,11 +633,7 @@ function Admin() {
 }
 
 export default function App() {
-  return <RoutesDummy />;
-}
-
-function RoutesDummy() {
-  const path = location.pathname;
+  const path = window.location.pathname;
 
   if (path.startsWith('/participate/')) return <Participate />;
   if (path === '/leaders') return <Leaders />;
