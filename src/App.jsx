@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
@@ -21,7 +22,6 @@ function Header() {
           <small>المعرفة القانونية تبدأ بسؤال</small>
         </span>
       </Link>
-
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/leaders">المتصدرون</Link>
@@ -86,7 +86,6 @@ function Home() {
               اختبر معلوماتك القانونية من خلال أسئلة مختارة،
               مع تفسير للإجابة ومصدرها النظامي.
             </p>
-
             <div className="chips">
               <span>أسئلة موثقة</span>
               <span>نتيجة فورية</span>
@@ -97,28 +96,19 @@ function Home() {
           <section className="card center">
             <div className="seal">⚖</div>
             <h2>هل أنت مستعد للتحدّي؟</h2>
-
             {!ready ? (
-              <Note>
-                المنصة قيد التجهيز، وسيتم تفعيل المشاركة بعد ربط قاعدة البيانات.
-              </Note>
+              <Note>المنصة قيد التجهيز.</Note>
             ) : questionSet ? (
               <>
                 <p>{questionSet.title}</p>
-                <Link
-                  className="btn"
-                  to={`/participate/${questionSet.id}`}
-                >
+                <Link className="btn" to={`/participate/${questionSet.id}`}>
                   ابدأ المشاركة ←
                 </Link>
               </>
             ) : (
               <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>
             )}
-
-            <small className="muted">
-              بيانات المشاركة لا تظهر للعامة.
-            </small>
+            <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
           </section>
         </div>
       </main>
@@ -146,10 +136,8 @@ function Leaders() {
           title="العشرة الأوائل"
           desc="التميّز القانوني يبدأ بالمعرفة."
         />
-
         <section className="card">
           <h2>قائمة المتصدرين الأسبوعية</h2>
-
           {!ready ? (
             <Note>ستظهر القائمة بعد ربط قاعدة البيانات.</Note>
           ) : rows.length ? (
@@ -170,7 +158,6 @@ function Leaders() {
 
 function Participate() {
   const { id } = useParams()
-
   const [setData, setSetData] = useState(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -188,42 +175,54 @@ function Participate() {
       return
     }
 
-    db.from('question_sets')
-      .select(`
-        id,
-        title,
-        questions(
-          id,
-          body,
-          explanation,
-          law_name,
-          article_number,
-          source_url,
-          position,
-          options(id,label,position)
-        )
-      `)
-      .eq('id', id)
-      .eq('status', 'published')
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error || !data) {
-          setErrorMessage('المسابقة غير متاحة.')
-          setPhase('error')
-          return
-        }
+    async function loadPublishedSet() {
+      const { data, error } = await db
+        .from('question_sets')
+        .select('id,title,questions(id,body,explanation,law_name,article_number,source_url,position)')
+        .eq('id', id)
+        .eq('status', 'published')
+        .maybeSingle()
 
-        const sortedQuestions = (data.questions || [])
+      if (error || !data) {
+        setErrorMessage('المسابقة غير متاحة.')
+        setPhase('error')
+        return
+      }
+
+      const sortedQuestions = (data.questions || [])
+        .sort((a, b) => a.position - b.position)
+
+      if (!sortedQuestions.length) {
+        setErrorMessage('لا توجد أسئلة في هذه المجموعة حتى الآن.')
+        setPhase('error')
+        return
+      }
+
+      // تحميل الخيارات العامة دون كشف الإجابة الصحيحة.
+      const questionIds = sortedQuestions.map(question => question.id)
+      const { data: publicOptions, error: optionsError } = await db
+        .from('public_options')
+        .select('id,question_id,label,position')
+        .in('question_id', questionIds)
+
+      if (optionsError) {
+        setErrorMessage('تعذر تحميل خيارات الأسئلة.')
+        setPhase('error')
+        return
+      }
+
+      sortedQuestions.forEach(question => {
+        question.options = (publicOptions || [])
+          .filter(option => option.question_id === question.id)
           .sort((a, b) => a.position - b.position)
-
-        sortedQuestions.forEach(question => {
-          question.options.sort((a, b) => a.position - b.position)
-        })
-
-        setSetData(data)
-        setQuestions(sortedQuestions)
-        setPhase('identity')
       })
+
+      setSetData(data)
+      setQuestions(sortedQuestions)
+      setPhase('identity')
+    }
+
+    loadPublishedSet()
   }, [id])
 
   async function submitAnswers() {
@@ -268,9 +267,7 @@ function Participate() {
           <section className="card">جارٍ التحميل…</section>
         )}
 
-        {phase === 'error' && (
-          <Note>{errorMessage}</Note>
-        )}
+        {phase === 'error' && <Note>{errorMessage}</Note>}
 
         {phase === 'identity' && (
           <section className="card form">
@@ -303,7 +300,6 @@ function Participate() {
                   setErrorMessage('تحقق من الاسم ورقم الجوال.')
                   return
                 }
-
                 setErrorMessage('')
                 setPhase('quiz')
               }}
@@ -315,10 +311,7 @@ function Participate() {
 
         {phase === 'quiz' && (
           <section className="card">
-            <small>
-              السؤال {step + 1} من {questions.length}
-            </small>
-
+            <small>السؤال {step + 1} من {questions.length}</small>
             <div className="progress">
               <span
                 style={{
@@ -366,7 +359,6 @@ function Participate() {
                       setErrorMessage('اختر إجابة أولًا.')
                       return
                     }
-
                     setErrorMessage('')
                     setStep(step + 1)
                   }}
@@ -384,10 +376,7 @@ function Participate() {
 
         {phase === 'result' && result && (
           <section className="card center">
-            <div className="score">
-              {result.score} / {result.total}
-            </div>
-
+            <div className="score">{result.score} / {result.total}</div>
             <h2>نتيجتك يا {name}</h2>
 
             {result.answer_details.map((detail, index) => (
@@ -395,24 +384,18 @@ function Participate() {
                 <b>
                   السؤال {index + 1}: {detail.is_correct ? 'صحيح' : 'غير صحيح'}
                 </b>
-
                 <p>{detail.question}</p>
                 <p>الإجابة الصحيحة: {detail.correct}</p>
                 <p>{detail.explanation}</p>
-
-                <a
-                  href={detail.source_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  المصدر الرسمي
-                </a>
+                {detail.source_url && (
+                  <a href={detail.source_url} target="_blank" rel="noreferrer">
+                    المصدر الرسمي
+                  </a>
+                )}
               </article>
             ))}
 
-            <Link className="btn" to="/">
-              الرئيسية
-            </Link>
+            <Link className="btn" to="/">الرئيسية</Link>
           </section>
         )}
       </main>
@@ -425,16 +408,25 @@ function Admin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [notice, setNotice] = useState('')
   const [sets, setSets] = useState([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [activeSet, setActiveSet] = useState(null)
+  const [questions, setQuestions] = useState([])
+  const [questionBody, setQuestionBody] = useState('')
+  const [explanation, setExplanation] = useState('')
+  const [lawName, setLawName] = useState('')
+  const [articleNumber, setArticleNumber] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [options, setOptions] = useState(['', '', '', ''])
+  const [correctIndex, setCorrectIndex] = useState('0')
+  const [savingQuestion, setSavingQuestion] = useState(false)
 
   useEffect(() => {
     if (!db) return
 
-    db.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+    db.auth.getSession().then(({ data }) => setSession(data.session))
 
     const {
       data: { subscription }
@@ -450,10 +442,7 @@ function Admin() {
     setErrorMessage('')
 
     const { data, error } = await db.functions.invoke('admin-login', {
-      body: {
-        username,
-        password
-      }
+      body: { username, password }
     })
 
     if (error || !data?.access_token) {
@@ -472,10 +461,15 @@ function Admin() {
   }
 
   async function loadSets() {
-    const { data } = await db
+    const { data, error } = await db
       .from('question_sets')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
 
     setSets(data || [])
   }
@@ -486,10 +480,11 @@ function Admin() {
 
   async function addSet(event) {
     event.preventDefault()
+    setErrorMessage('')
 
     const { error } = await db.from('question_sets').insert({
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       status: 'draft'
     })
 
@@ -500,10 +495,121 @@ function Admin() {
 
     setTitle('')
     setDescription('')
-    loadSets()
+    setNotice('تم حفظ مجموعة الأسئلة كمسودة.')
+    await loadSets()
+  }
+
+  async function openSet(set) {
+    setActiveSet(set)
+    setErrorMessage('')
+    setNotice('')
+
+    const { data, error } = await db
+      .from('questions')
+      .select('id,body,explanation,law_name,article_number,source_url,position,options(id,label,is_correct,position)')
+      .eq('set_id', set.id)
+      .order('position', { ascending: true })
+
+    if (error) {
+      setErrorMessage('تعذر تحميل الأسئلة: ' + error.message)
+      setQuestions([])
+      return
+    }
+
+    const ordered = (data || []).map(question => ({
+      ...question,
+      options: (question.options || []).sort(
+        (a, b) => a.position - b.position
+      )
+    }))
+
+    setQuestions(ordered)
+  }
+
+  async function saveQuestion(event) {
+    event.preventDefault()
+
+    if (!activeSet) return
+
+    if (
+      !questionBody.trim() ||
+      options.some(option => !option.trim()) ||
+      !explanation.trim()
+    ) {
+      setErrorMessage('أكملي نص السؤال والخيارات الأربعة والتفسير.')
+      return
+    }
+
+    setSavingQuestion(true)
+    setErrorMessage('')
+    setNotice('')
+
+    const nextPosition =
+      questions.reduce(
+        (max, question) => Math.max(max, question.position || 0),
+        0
+      ) + 1
+
+    const { data: question, error: questionError } = await db
+      .from('questions')
+      .insert({
+        set_id: activeSet.id,
+        body: questionBody.trim(),
+        explanation: explanation.trim(),
+        law_name: lawName.trim() || null,
+        article_number: articleNumber.trim() || null,
+        source_url: sourceUrl.trim() || null,
+        position: nextPosition
+      })
+      .select('id')
+      .single()
+
+    if (questionError || !question) {
+      setErrorMessage(
+        'تعذر حفظ السؤال: ' +
+        (questionError?.message || 'خطأ غير معروف')
+      )
+      setSavingQuestion(false)
+      return
+    }
+
+    const optionRows = options.map((label, index) => ({
+      question_id: question.id,
+      label: label.trim(),
+      is_correct: index === Number(correctIndex),
+      position: index + 1
+    }))
+
+    const { error: optionsError } = await db
+      .from('options')
+      .insert(optionRows)
+
+    if (optionsError) {
+      setErrorMessage(
+        'تم حفظ نص السؤال لكن تعذر حفظ الخيارات: ' +
+        optionsError.message
+      )
+      setSavingQuestion(false)
+      await openSet(activeSet)
+      return
+    }
+
+    setQuestionBody('')
+    setExplanation('')
+    setLawName('')
+    setArticleNumber('')
+    setSourceUrl('')
+    setOptions(['', '', '', ''])
+    setCorrectIndex('0')
+    setNotice('تم حفظ السؤال وخياراته بنجاح.')
+    setSavingQuestion(false)
+
+    await openSet(activeSet)
   }
 
   async function changeStatus(id, status) {
+    setErrorMessage('')
+
     const { error } = await db
       .from('question_sets')
       .update({ status })
@@ -514,17 +620,18 @@ function Admin() {
       return
     }
 
-    loadSets()
+    setNotice(
+      status === 'published' ? 'تم نشر المجموعة.' : 'تمت أرشفة المجموعة.'
+    )
+
+    await loadSets()
   }
 
   if (!ready) {
     return (
       <Shell>
         <main className="narrow">
-          <Hero
-            title="دخول المسؤولين"
-            desc="مساحة خاصة بالمسؤولين."
-          />
+          <Hero title="دخول المسؤولين" desc="مساحة خاصة بالمسؤولين." />
           <Note>المنصة قيد الإعداد.</Note>
         </main>
       </Shell>
@@ -561,7 +668,6 @@ function Admin() {
             </label>
 
             {errorMessage && <Note>{errorMessage}</Note>}
-
             <button className="btn">تسجيل الدخول</button>
           </form>
         ) : (
@@ -597,29 +703,173 @@ function Admin() {
               </button>
             </form>
 
+            {errorMessage && <Note>{errorMessage}</Note>}
+            {notice && <Note>{notice}</Note>}
+
             <section className="card">
               <h2>مجموعات الأسئلة</h2>
 
               {sets.map(set => (
                 <div className="leader" key={set.id}>
-                  <span>
-                    {set.title} — {set.status}
-                  </span>
+                  <span>{set.title} — {set.status}</span>
 
-                  <button
-                    className="mini"
-                    onClick={() =>
-                      changeStatus(
-                        set.id,
-                        set.status === 'published' ? 'archived' : 'published'
-                      )
-                    }
-                  >
-                    {set.status === 'published' ? 'أرشفة' : 'نشر'}
-                  </button>
+                  <div className="actions">
+                    <button
+                      className="mini"
+                      type="button"
+                      onClick={() => openSet(set)}
+                    >
+                      إدارة الأسئلة
+                    </button>
+
+                    <button
+                      className="mini"
+                      type="button"
+                      onClick={() =>
+                        changeStatus(
+                          set.id,
+                          set.status === 'published'
+                            ? 'archived'
+                            : 'published'
+                        )
+                      }
+                    >
+                      {set.status === 'published' ? 'أرشفة' : 'نشر'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </section>
+
+            {activeSet && (
+              <section className="card form">
+                <div
+                  className="actions"
+                  style={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <h2>إدارة أسئلة: {activeSet.title}</h2>
+                  <button
+                    type="button"
+                    className="mini"
+                    onClick={() => setActiveSet(null)}
+                  >
+                    إغلاق
+                  </button>
+                </div>
+
+                <h3>الأسئلة المحفوظة ({questions.length})</h3>
+
+                {questions.map((question, index) => (
+                  <article className="review" key={question.id}>
+                    <b>{index + 1}. {question.body}</b>
+                    <p>
+                      الإجابة الصحيحة:{' '}
+                      {question.options?.find(option => option.is_correct)?.label ||
+                        'غير محددة'}
+                    </p>
+                    <small>
+                      {question.law_name || ''} {question.article_number || ''}
+                    </small>
+                  </article>
+                ))}
+
+                <hr />
+                <h3>إضافة سؤال جديد</h3>
+
+                <label>
+                  نص السؤال
+                  <textarea
+                    value={questionBody}
+                    onChange={event => setQuestionBody(event.target.value)}
+                    required
+                  />
+                </label>
+
+                <label>
+                  اسم النظام
+                  <input
+                    value={lawName}
+                    onChange={event => setLawName(event.target.value)}
+                    placeholder="مثال: نظام المرافعات الشرعية"
+                  />
+                </label>
+
+                <label>
+                  رقم المادة
+                  <input
+                    value={articleNumber}
+                    onChange={event => setArticleNumber(event.target.value)}
+                    placeholder="مثال: المادة ٧٦"
+                  />
+                </label>
+
+                <label>
+                  رابط المصدر الرسمي
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={event => setSourceUrl(event.target.value)}
+                    placeholder="https://..."
+                  />
+                </label>
+
+                <h3>الخيارات (أربعة خيارات)</h3>
+
+                {options.map((option, index) => (
+                  <label key={index}>
+                    الخيار {index + 1}
+                    <input
+                      value={option}
+                      onChange={event =>
+                        setOptions(current =>
+                          current.map((value, optionIndex) =>
+                            optionIndex === index
+                              ? event.target.value
+                              : value
+                          )
+                        )
+                      }
+                      required
+                    />
+                  </label>
+                ))}
+
+                <label>
+                  الإجابة الصحيحة
+                  <select
+                    value={correctIndex}
+                    onChange={event => setCorrectIndex(event.target.value)}
+                  >
+                    {options.map((_, index) => (
+                      <option key={index} value={String(index)}>
+                        الخيار {index + 1}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  تفسير الإجابة
+                  <textarea
+                    value={explanation}
+                    onChange={event => setExplanation(event.target.value)}
+                    required
+                  />
+                </label>
+
+                <button
+                  className="btn"
+                  type="button"
+                  disabled={savingQuestion}
+                  onClick={saveQuestion}
+                >
+                  {savingQuestion ? 'جارٍ الحفظ…' : 'حفظ السؤال والخيارات'}
+                </button>
+              </section>
+            )}
           </>
         )}
       </main>
