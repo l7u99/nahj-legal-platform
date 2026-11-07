@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react'
-import { Link, useParams, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
 
 function Header() {
@@ -194,7 +194,8 @@ function Leaders() {
 }
 
 function Participate() {
-  const { id } = useParams()
+  const { pathname } = useLocation()
+  const id = pathname.split('/').filter(Boolean).at(-1)
 
   const [setData, setSetData] = useState(null)
   const [name, setName] = useState('')
@@ -209,8 +210,8 @@ function Participate() {
 
   useEffect(() => {
     async function loadPublishedSet() {
-      if (!ready) {
-        setErrorMessage('المنصة غير مربوطة بعد.')
+      if (!ready || !id) {
+        setErrorMessage('تعذر تحديد المسابقة المطلوبة.')
         setPhase('error')
         return
       }
@@ -218,7 +219,6 @@ function Participate() {
       setPhase('loading')
       setErrorMessage('')
 
-      // أولًا: تحميل مجموعة الأسئلة المنشورة.
       const { data: publishedSet, error: setError } = await db
         .from('question_sets')
         .select('id,title,description')
@@ -233,7 +233,6 @@ function Participate() {
         return
       }
 
-      // ثانيًا: تحميل أسئلة المجموعة بشكل مستقل.
       const { data: questionRows, error: questionsError } = await db
         .from('questions')
         .select('id,body,explanation,law_name,article_number,source_url,position')
@@ -255,7 +254,6 @@ function Participate() {
         return
       }
 
-      // ثالثًا: تحميل الخيارات العامة دون كشف الإجابة الصحيحة.
       const questionIds = sortedQuestions.map(question => question.id)
 
       const { data: publicOptions, error: optionsError } = await db
@@ -270,7 +268,6 @@ function Participate() {
         return
       }
 
-      // رابعًا: ربط خيارات كل سؤال بسؤاله.
       const questionsWithOptions = sortedQuestions.map(question => ({
         ...question,
         options: (publicOptions || [])
@@ -484,7 +481,7 @@ function Participate() {
 
             <h2>نتيجتك يا {name}</h2>
 
-            {result.answer_details.map((detail, index) => (
+            {(result.answer_details || []).map((detail, index) => (
               <article className="review" key={index}>
                 <b>
                   السؤال {index + 1}: {detail.is_correct ? 'صحيح' : 'غير صحيح'}
@@ -638,9 +635,8 @@ function Admin() {
   }
 
   async function saveQuestion(event) {
-    event.preventDefault()
-
-    if (!activeSet) return
+    if (event) event.preventDefault()
+    if (!activeSet || savingQuestion) return
 
     if (
       !questionBody.trim() ||
