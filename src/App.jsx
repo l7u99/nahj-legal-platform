@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
 
@@ -219,6 +218,11 @@ function Participate() {
   const [phase, setPhase] = useState('loading')
   const [result, setResult] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // يمنع الضغط المتكرر ويحتفظ بمعرّف واحد للمحاولة الحالية.
+  const submittingRef = useRef(false)
+  const submissionTokenRef = useRef(crypto.randomUUID())
 
   useEffect(() => {
     if (!ready || !id) {
@@ -277,36 +281,50 @@ function Participate() {
   }, [id])
 
   async function submitAnswers() {
+    // الحماية الأولى: منع أي طلب ثانٍ أثناء تنفيذ الطلب الأول.
+    if (submittingRef.current) return
+
     if (Object.keys(answers).length !== questions.length) {
       setErrorMessage('أجب عن جميع الأسئلة.')
       return
     }
 
+    submittingRef.current = true
+    setSubmitting(true)
     setErrorMessage('')
 
-    const { data, error } = await db.functions.invoke(
-      'submit-participation',
-      {
-        body: {
-          p_name: name,
-          p_phone: phone,
-          set_id: id,
-          answers: questions.map(question => ({
-            question_id: question.id,
-            option_id: answers[question.id]
-          }))
+    try {
+      const { data, error } = await db.functions.invoke(
+        'submit-participation',
+        {
+          body: {
+            p_name: name,
+            p_phone: phone,
+            set_id: id,
+            submission_token: submissionTokenRef.current,
+            answers: questions.map(question => ({
+              question_id: question.id,
+              option_id: answers[question.id]
+            }))
+          }
         }
+      )
+
+      if (error || !data?.result) {
+        console.error('Submit error:', error)
+        setErrorMessage(data?.error || 'تعذر اعتماد المشاركة.')
+        return
       }
-    )
 
-    if (error || !data?.result) {
+      setResult(data.result)
+      setPhase('result')
+    } catch (error) {
       console.error('Submit error:', error)
-      setErrorMessage(data?.error || 'تعذر اعتماد المشاركة.')
-      return
+      setErrorMessage('تعذر اعتماد المشاركة. حاول مرة أخرى.')
+    } finally {
+      submittingRef.current = false
+      setSubmitting(false)
     }
-
-    setResult(data.result)
-    setPhase('result')
   }
 
   return (
@@ -389,7 +407,13 @@ function Participate() {
                   التالي
                 </button>
               ) : (
-                <button className="btn" onClick={submitAnswers}>اعتماد الإجابات</button>
+                <button
+                  className="btn"
+                  onClick={submitAnswers}
+                  disabled={submitting}
+                >
+                  {submitting ? 'جارٍ اعتماد المشاركة…' : 'اعتماد الإجابات'}
+                </button>
               )}
             </div>
           </section>
