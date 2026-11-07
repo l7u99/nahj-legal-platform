@@ -22,6 +22,7 @@ function Header() {
           <small>المعرفة القانونية تبدأ بسؤال</small>
         </span>
       </Link>
+
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/leaders">المتصدرون</Link>
@@ -57,34 +58,17 @@ function Note({ children }) {
 
 function Home() {
   const [questionSet, setQuestionSet] = useState(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function loadHome() {
-      if (!ready) {
-        setLoading(false)
-        return
-      }
+    if (!ready) return
 
-      const { data, error } = await db
-        .from('question_sets')
-        .select('id,title,description')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) {
-        console.error('Home question set error:', error)
-        setQuestionSet(null)
-      } else {
-        setQuestionSet(data)
-      }
-
-      setLoading(false)
-    }
-
-    loadHome()
+    db.from('question_sets')
+      .select('id,title,description')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setQuestionSet(data))
   }, [])
 
   return (
@@ -98,11 +82,14 @@ function Home() {
         <div className="cols">
           <section className="card">
             <small className="gold">التحدّي القانوني الأسبوعي</small>
+
             <h2>معرفةٌ تُبنى بسؤال، وثقافةٌ تنمو بالممارسة.</h2>
+
             <p>
               اختبر معلوماتك القانونية من خلال أسئلة مختارة،
               مع تفسير للإجابة ومصدرها النظامي.
             </p>
+
             <div className="chips">
               <span>أسئلة موثقة</span>
               <span>نتيجة فورية</span>
@@ -112,16 +99,20 @@ function Home() {
 
           <section className="card center">
             <div className="seal">⚖</div>
+
             <h2>هل أنت مستعد للتحدّي؟</h2>
 
-            {loading ? (
-              <Note>جارٍ تحميل المسابقة…</Note>
-            ) : !ready ? (
-              <Note>المنصة قيد التجهيز.</Note>
+            {!ready ? (
+              <Note>
+                المنصة قيد التجهيز، وسيتم تفعيل المشاركة بعد ربط قاعدة البيانات.
+              </Note>
             ) : questionSet ? (
               <>
                 <p>{questionSet.title}</p>
-                <Link className="btn" to={`/participate/${questionSet.id}`}>
+                <Link
+                  className="btn"
+                  to={`/participate/${questionSet.id}`}
+                >
                   ابدأ المشاركة ←
                 </Link>
               </>
@@ -129,7 +120,9 @@ function Home() {
               <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>
             )}
 
-            <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
+            <small className="muted">
+              بيانات المشاركة لا تظهر للعامة.
+            </small>
           </section>
         </div>
       </main>
@@ -139,27 +132,15 @@ function Home() {
 
 function Leaders() {
   const [rows, setRows] = useState([])
-  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    async function loadLeaders() {
-      if (!ready) return
+    if (!ready) return
 
-      const { data, error } = await db
-        .from('weekly_leaderboard')
-        .select('display_name,score')
-        .order('score', { ascending: false })
-        .limit(10)
-
-      if (error) {
-        setErrorMessage('تعذر تحميل قائمة المتصدرين.')
-        return
-      }
-
-      setRows(data || [])
-    }
-
-    loadLeaders()
+    db.from('weekly_leaderboard')
+      .select('display_name,score')
+      .order('score', { ascending: false })
+      .limit(10)
+      .then(({ data }) => setRows(data || []))
   }, [])
 
   return (
@@ -175,8 +156,6 @@ function Leaders() {
 
           {!ready ? (
             <Note>ستظهر القائمة بعد ربط قاعدة البيانات.</Note>
-          ) : errorMessage ? (
-            <Note>{errorMessage}</Note>
           ) : rows.length ? (
             rows.map((row, index) => (
               <div className="leader" key={index}>
@@ -194,8 +173,13 @@ function Leaders() {
 }
 
 function Participate() {
+  // استخراج معرّف المسابقة مباشرة من الرابط
   const { pathname } = useLocation()
-  const id = pathname.split('/').filter(Boolean).at(-1)
+  const pathParts = pathname.split('/').filter(Boolean)
+  const participateIndex = pathParts.lastIndexOf('participate')
+  const id = participateIndex >= 0
+    ? pathParts[participateIndex + 1]
+    : undefined
 
   const [setData, setSetData] = useState(null)
   const [name, setName] = useState('')
@@ -206,47 +190,37 @@ function Participate() {
   const [phase, setPhase] = useState('loading')
   const [result, setResult] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
-  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    if (!ready) {
+      setErrorMessage('المنصة غير مربوطة بعد.')
+      setPhase('error')
+      return
+    }
+
+    if (!id) {
+      setErrorMessage('رابط المسابقة غير صحيح؛ لم يتم العثور على معرّف المجموعة.')
+      setPhase('error')
+      return
+    }
+
     async function loadPublishedSet() {
-      if (!ready || !id) {
-        setErrorMessage('تعذر تحديد المسابقة المطلوبة.')
-        setPhase('error')
-        return
-      }
-
-      setPhase('loading')
-      setErrorMessage('')
-
-      const { data: publishedSet, error: setError } = await db
+      const { data, error } = await db
         .from('question_sets')
-        .select('id,title,description')
+        .select('id,title,questions(id,body,explanation,law_name,article_number,source_url,position)')
         .eq('id', id)
         .eq('status', 'published')
         .maybeSingle()
 
-      if (setError || !publishedSet) {
-        console.error('Published set error:', setError)
-        setErrorMessage('تعذر العثور على المسابقة المنشورة.')
+      if (error || !data) {
+        console.error('خطأ تحميل المسابقة:', error)
+        setErrorMessage('المسابقة غير متاحة.')
         setPhase('error')
         return
       }
 
-      const { data: questionRows, error: questionsError } = await db
-        .from('questions')
-        .select('id,body,explanation,law_name,article_number,source_url,position')
-        .eq('set_id', id)
-        .order('position', { ascending: true })
-
-      if (questionsError) {
-        console.error('Questions loading error:', questionsError)
-        setErrorMessage('تعذر تحميل أسئلة المسابقة.')
-        setPhase('error')
-        return
-      }
-
-      const sortedQuestions = questionRows || []
+      const sortedQuestions = (data.questions || [])
+        .sort((a, b) => a.position - b.position)
 
       if (!sortedQuestions.length) {
         setErrorMessage('لا توجد أسئلة في هذه المجموعة حتى الآن.')
@@ -254,6 +228,7 @@ function Participate() {
         return
       }
 
+      // الخيارات العامة تُقرأ من view لا يكشف is_correct للزوار.
       const questionIds = sortedQuestions.map(question => question.id)
 
       const { data: publicOptions, error: optionsError } = await db
@@ -262,79 +237,55 @@ function Participate() {
         .in('question_id', questionIds)
 
       if (optionsError) {
-        console.error('Public options loading error:', optionsError)
+        console.error('خطأ تحميل الخيارات:', optionsError)
         setErrorMessage('تعذر تحميل خيارات الأسئلة.')
         setPhase('error')
         return
       }
 
-      const questionsWithOptions = sortedQuestions.map(question => ({
-        ...question,
-        options: (publicOptions || [])
+      sortedQuestions.forEach(question => {
+        question.options = (publicOptions || [])
           .filter(option => option.question_id === question.id)
           .sort((a, b) => a.position - b.position)
-      }))
+      })
 
-      const missingOptions = questionsWithOptions.some(
-        question => question.options.length !== 4
-      )
-
-      if (missingOptions) {
-        setErrorMessage('بعض الأسئلة لا تحتوي على أربعة خيارات مكتملة.')
-        setPhase('error')
-        return
-      }
-
-      setSetData(publishedSet)
-      setQuestions(questionsWithOptions)
+      setSetData(data)
+      setQuestions(sortedQuestions)
       setPhase('identity')
     }
 
     loadPublishedSet()
-  }, [id])
+  }, [id, ready])
 
   async function submitAnswers() {
-    if (submitting) return
-
     if (Object.keys(answers).length !== questions.length) {
       setErrorMessage('أجب عن جميع الأسئلة.')
       return
     }
 
-    setSubmitting(true)
-    setErrorMessage('')
-
-    try {
-      const { data, error } = await db.functions.invoke(
-        'submit-participation',
-        {
-          body: {
-            p_name: name,
-            p_phone: phone,
-            set_id: id,
-            answers: questions.map(question => ({
-              question_id: question.id,
-              option_id: answers[question.id]
-            }))
-          }
+    const { data, error } = await db.functions.invoke(
+      'submit-participation',
+      {
+        body: {
+          p_name: name,
+          p_phone: phone,
+          set_id: id,
+          answers: questions.map(question => ({
+            question_id: question.id,
+            option_id: answers[question.id]
+          }))
         }
-      )
-
-      if (error || !data?.result) {
-        console.error('Participation submission error:', error)
-        setErrorMessage('تعذر اعتماد المشاركة. حاول مرة أخرى.')
-        setSubmitting(false)
-        return
       }
+    )
 
-      setResult(data.result)
-      setPhase('result')
-    } catch (error) {
-      console.error(error)
-      setErrorMessage('حدث خطأ أثناء إرسال الإجابات.')
+    if (error || !data?.result) {
+      console.error('خطأ اعتماد المشاركة:', error)
+      setErrorMessage('تعذر اعتماد المشاركة.')
+      return
     }
 
-    setSubmitting(false)
+    setResult(data.result)
+    setPhase('result')
   }
 
   return (
@@ -350,10 +301,7 @@ function Participate() {
         )}
 
         {phase === 'error' && (
-          <section className="card">
-            <Note>{errorMessage}</Note>
-            <Link className="btn" to="/">العودة للرئيسية</Link>
-          </section>
+          <Note>{errorMessage}</Note>
         )}
 
         {phase === 'identity' && (
@@ -397,7 +345,7 @@ function Participate() {
           </section>
         )}
 
-        {phase === 'quiz' && questions.length > 0 && (
+        {phase === 'quiz' && (
           <section className="card">
             <small>
               السؤال {step + 1} من {questions.length}
@@ -421,10 +369,10 @@ function Participate() {
                 }
                 key={option.id}
                 onClick={() =>
-                  setAnswers(current => ({
-                    ...current,
+                  setAnswers({
+                    ...answers,
                     [questions[step].id]: option.id
-                  }))
+                  })
                 }
               >
                 {String.fromCharCode(65 + index)} · {option.label}
@@ -436,11 +384,8 @@ function Participate() {
             <div className="actions">
               <button
                 className="btn secondary"
-                disabled={!step || submitting}
-                onClick={() => {
-                  setErrorMessage('')
-                  setStep(step - 1)
-                }}
+                disabled={!step}
+                onClick={() => setStep(step - 1)}
               >
                 السابق
               </button>
@@ -461,12 +406,8 @@ function Participate() {
                   التالي
                 </button>
               ) : (
-                <button
-                  className="btn"
-                  disabled={submitting}
-                  onClick={submitAnswers}
-                >
-                  {submitting ? 'جارٍ اعتماد الإجابات…' : 'اعتماد الإجابات'}
+                <button className="btn" onClick={submitAnswers}>
+                  اعتماد الإجابات
                 </button>
               )}
             </div>
@@ -481,7 +422,7 @@ function Participate() {
 
             <h2>نتيجتك يا {name}</h2>
 
-            {(result.answer_details || []).map((detail, index) => (
+            {result.answer_details.map((detail, index) => (
               <article className="review" key={index}>
                 <b>
                   السؤال {index + 1}: {detail.is_correct ? 'صحيح' : 'غير صحيح'}
@@ -491,19 +432,19 @@ function Participate() {
                 <p>الإجابة الصحيحة: {detail.correct}</p>
                 <p>{detail.explanation}</p>
 
-                {detail.source_url && (
-                  <a
-                    href={detail.source_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    المصدر الرسمي
-                  </a>
-                )}
+                <a
+                  href={detail.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  المصدر الرسمي
+                </a>
               </article>
             ))}
 
-            <Link className="btn" to="/">الرئيسية</Link>
+            <Link className="btn" to="/">
+              الرئيسية
+            </Link>
           </section>
         )}
       </main>
@@ -626,17 +567,16 @@ function Admin() {
 
     const ordered = (data || []).map(question => ({
       ...question,
-      options: (question.options || []).sort(
-        (a, b) => a.position - b.position
-      )
+      options: (question.options || []).sort((a, b) => a.position - b.position)
     }))
 
     setQuestions(ordered)
   }
 
   async function saveQuestion(event) {
-    if (event) event.preventDefault()
-    if (!activeSet || savingQuestion) return
+    event.preventDefault()
+
+    if (!activeSet) return
 
     if (
       !questionBody.trim() ||
@@ -710,7 +650,6 @@ function Admin() {
     setCorrectIndex('0')
     setNotice('تم حفظ السؤال وخياراته بنجاح.')
     setSavingQuestion(false)
-
     await openSet(activeSet)
   }
 
@@ -728,7 +667,9 @@ function Admin() {
     }
 
     setNotice(
-      status === 'published' ? 'تم نشر المجموعة.' : 'تمت أرشفة المجموعة.'
+      status === 'published'
+        ? 'تم نشر المجموعة.'
+        : 'تمت أرشفة المجموعة.'
     )
 
     await loadSets()
@@ -738,7 +679,10 @@ function Admin() {
     return (
       <Shell>
         <main className="narrow">
-          <Hero title="دخول المسؤولين" desc="مساحة خاصة بالمسؤولين." />
+          <Hero
+            title="دخول المسؤولين"
+            desc="مساحة خاصة بالمسؤولين."
+          />
           <Note>المنصة قيد الإعداد.</Note>
         </main>
       </Shell>
@@ -886,6 +830,7 @@ function Admin() {
                 ))}
 
                 <hr />
+
                 <h3>إضافة سؤال جديد</h3>
 
                 <label>
@@ -975,7 +920,9 @@ function Admin() {
                   disabled={savingQuestion}
                   onClick={saveQuestion}
                 >
-                  {savingQuestion ? 'جارٍ الحفظ…' : 'حفظ السؤال والخيارات'}
+                  {savingQuestion
+                    ? 'جارٍ الحفظ…'
+                    : 'حفظ السؤال والخيارات'}
                 </button>
               </section>
             )}
@@ -989,6 +936,7 @@ function Admin() {
 export default function App() {
   const { pathname } = useLocation()
   const basePath = import.meta.env.BASE_URL || '/'
+
   const path = pathname.startsWith(basePath)
     ? `/${pathname.slice(basePath.length)}`.replace(/\/{2,}/g, '/')
     : pathname
