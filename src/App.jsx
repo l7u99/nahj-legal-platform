@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
@@ -55,7 +56,17 @@ function Note({ children }) {
   return <div className="note">{children}</div>
 }
 
-/* الصفحة الرئيسية */
+function formatDate(value) {
+  if (!value) return 'غير متوفر'
+
+  return new Date(value).toLocaleString('ar-SA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 function Home() {
   const [questionSet, setQuestionSet] = useState(null)
@@ -131,8 +142,6 @@ function Home() {
   )
 }
 
-/* قائمة المتصدرين */
-
 function Leaders() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -146,14 +155,15 @@ function Leaders() {
 
     async function loadLeaders() {
       const { data, error } = await db
-        .from('weekly_leaderboard')
-        .select('*')
+        .from('weekly_leaderboard_full')
+        .select('full_name,score,total')
         .order('score', { ascending: false })
         .limit(10)
 
       if (error) {
         console.error('خطأ تحميل المتصدرين:', error)
-        setErrorMessage('تعذر تحميل قائمة المتصدرين.')
+        setErrorMessage('تعذر تحميل قائمة المتصدرين حاليًا.')
+        setRows([])
       } else {
         setRows(data || [])
       }
@@ -181,13 +191,9 @@ function Leaders() {
             <Note>{errorMessage}</Note>
           ) : rows.length ? (
             rows.map((row, index) => (
-              <div className="leader" key={row.id || index}>
-                <b>
-                  {index + 1}. {row.full_name || row.display_name || 'مشارك'}
-                </b>
-                <strong>
-                  {row.score} / {row.total ?? 3}
-                </strong>
+              <div className="leader" key={`${row.full_name}-${index}`}>
+                <b>{index + 1}. {row.full_name || 'مشارك'}</b>
+                <strong>{row.score} / {row.total}</strong>
               </div>
             ))
           ) : (
@@ -198,8 +204,6 @@ function Leaders() {
     </Shell>
   )
 }
-
-/* صفحة المشاركة والأسئلة */
 
 function Participate() {
   const { pathname } = useLocation()
@@ -282,13 +286,15 @@ function Participate() {
     }
 
     loadPublishedSet()
-  }, [id])
+  }, [id, ready])
 
   async function submitAnswers() {
     if (Object.keys(answers).length !== questions.length) {
       setErrorMessage('أجب عن جميع الأسئلة.')
       return
     }
+
+    setErrorMessage('')
 
     const { data, error } = await db.functions.invoke(
       'submit-participation',
@@ -481,19 +487,15 @@ function Participate() {
   )
 }
 
-/* لوحة الإدارة */
-
 function Admin() {
   const [session, setSession] = useState(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [notice, setNotice] = useState('')
-
   const [sets, setSets] = useState([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-
   const [activeSet, setActiveSet] = useState(null)
   const [questions, setQuestions] = useState([])
   const [questionBody, setQuestionBody] = useState('')
@@ -505,8 +507,10 @@ function Admin() {
   const [correctIndex, setCorrectIndex] = useState('0')
   const [savingQuestion, setSavingQuestion] = useState(false)
 
-  // حالات سجل المشاركات
+  // سجل المشاركات
   const [participations, setParticipations] = useState([])
+  const [participationCount, setParticipationCount] = useState(0)
+  const [averageScore, setAverageScore] = useState(0)
   const [loadingParticipations, setLoadingParticipations] = useState(false)
   const [selectedParticipation, setSelectedParticipation] = useState(null)
   const [participationAnswers, setParticipationAnswers] = useState([])
@@ -563,27 +567,66 @@ function Admin() {
     setSets(data || [])
   }
 
-  // جلب المشاركات من قاعدة البيانات دون جلب بيانات الجوال
   async function loadParticipations() {
     setLoadingParticipations(true)
+    setErrorMessage('')
+    setSelectedParticipation(null)
+    setParticipationAnswers([])
+
+    const { count, error: countError } = await db
+      .from('participations')
+      .select('id', { count: 'exact', head: true })
+
+    if (countError) {
+      console.error('خطأ عد المشاركات:', countError)
+      setErrorMessage(
+        'تعذر تحميل سجل المشاركات. تحققي من صلاحيات المسؤول في قاعدة البيانات: ' +
+        countError.message
+      )
+      setLoadingParticipations(false)
+      return
+    }
+
+    setParticipationCount(count || 0)
 
     const { data, error } = await db
       .from('participations')
       .select('id,set_id,full_name,score,total,completed_at')
       .order('completed_at', { ascending: false })
-      .limit(200)
+      .limit(500)
 
     if (error) {
+      console.error('خطأ تحميل المشاركات:', error)
       setErrorMessage('تعذر تحميل سجل المشاركات: ' + error.message)
       setLoadingParticipations(false)
       return
     }
 
-    setParticipations(data || [])
+    const rows = (data || []).map(participation => {
+      const questionSet = sets.find(
+        item => item.id === participation.set_id
+      )
+
+      return {
+        ...participation,
+        set_title: questionSet?.title || 'مجموعة أسئلة'
+      }
+    })
+
+    setParticipations(rows)
+
+    const percentages = rows
+      .filter(row => Number(row.total) > 0)
+      .map(row => (Number(row.score) / Number(row.total)) * 100)
+
+    const average = percentages.length
+      ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length
+      : 0
+
+    setAverageScore(average)
     setLoadingParticipations(false)
   }
 
-  // عرض تفاصيل إجابات المشارك
   async function openParticipation(participation) {
     setSelectedParticipation(participation)
     setParticipationAnswers([])
@@ -609,7 +652,10 @@ function Admin() {
       .eq('participation_id', participation.id)
 
     if (error) {
-      setErrorMessage('تعذر تحميل تفاصيل الإجابات: ' + error.message)
+      console.error('خطأ تحميل تفاصيل المشاركة:', error)
+      setErrorMessage(
+        'تعذر تحميل تفاصيل الإجابات: ' + error.message
+      )
       setLoadingAnswers(false)
       return
     }
@@ -619,11 +665,14 @@ function Admin() {
   }
 
   useEffect(() => {
-    if (session) {
-      loadSets()
+    if (session) loadSets()
+  }, [session])
+
+  useEffect(() => {
+    if (session && sets.length >= 0) {
       loadParticipations()
     }
-  }, [session])
+  }, [session, sets])
 
   async function addSet(event) {
     event.preventDefault()
@@ -665,9 +714,7 @@ function Admin() {
 
     const ordered = (data || []).map(question => ({
       ...question,
-      options: (question.options || []).sort(
-        (a, b) => a.position - b.position
-      )
+      options: (question.options || []).sort((a, b) => a.position - b.position)
     }))
 
     setQuestions(ordered)
@@ -775,29 +822,6 @@ function Admin() {
     await loadSets()
   }
 
-  function formatDate(value) {
-    if (!value) return '—'
-
-    return new Date(value).toLocaleString('ar-SA', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    })
-  }
-
-  const averageScore = participations.length
-    ? (
-        participations.reduce(
-          (sum, item) =>
-            sum + (
-              item.total
-                ? (item.score / item.total) * 100
-                : 0
-            ),
-          0
-        ) / participations.length
-      ).toFixed(0)
-    : 0
-
   if (!ready) {
     return (
       <Shell>
@@ -847,8 +871,6 @@ function Admin() {
           </form>
         ) : (
           <>
-            {/* إنشاء مجموعة أسئلة */}
-
             <form className="card form" onSubmit={addSet}>
               <h2>إنشاء مجموعة أسئلة (مسودة)</h2>
 
@@ -883,98 +905,67 @@ function Admin() {
             {errorMessage && <Note>{errorMessage}</Note>}
             {notice && <Note>{notice}</Note>}
 
-            {/* إحصائيات المشاركات */}
-
             <section className="card">
-              <h2>إحصائيات المشاركات</h2>
-
-              <div className="chips">
-                <span>
-                  إجمالي المشاركات: {participations.length}
-                </span>
-
-                <span>
-                  متوسط الدرجات: {averageScore}%
-                </span>
-              </div>
-
-              <button
-                className="btn secondary"
-                type="button"
-                onClick={() => {
-                  loadParticipations()
-                  loadSets()
-                }}
-              >
-                تحديث الإحصائيات
-              </button>
-            </section>
-
-            {/* سجل المشاركين */}
-
-            <section className="card">
-              <div
-                className="actions"
-                style={{
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
+              <div className="actions" style={{ justifyContent: 'space-between' }}>
                 <h2>سجل المشاركات</h2>
 
                 <button
-                  className="mini"
                   type="button"
+                  className="mini"
                   onClick={loadParticipations}
+                  disabled={loadingParticipations}
                 >
                   تحديث السجل
                 </button>
               </div>
 
-              {loadingParticipations ? (
-                <Note>جارٍ تحميل المشاركات…</Note>
-              ) : participations.length ? (
-                participations.map((item, index) => (
-                  <div className="leader" key={item.id}>
-                    <div>
-                      <b>
-                        {index + 1}. {item.full_name}
-                      </b>
+              <div className="cols">
+                <div className="card center">
+                  <small className="gold">إجمالي المشاركات</small>
+                  <div className="score">{participationCount}</div>
+                </div>
 
-                      <small
-                        className="muted"
-                        style={{ display: 'block' }}
-                      >
-                        {sets.find(set => set.id === item.set_id)?.title ||
-                          'مجموعة أسئلة'}
-                      </small>
-
-                      <small className="muted">
-                        {formatDate(item.completed_at)}
-                      </small>
-                    </div>
-
-                    <div style={{ textAlign: 'left' }}>
-                      <strong>
-                        {item.score} / {item.total}
-                      </strong>
-
-                      <button
-                        className="mini"
-                        type="button"
-                        onClick={() => openParticipation(item)}
-                      >
-                        عرض التفاصيل
-                      </button>
-                    </div>
+                <div className="card center">
+                  <small className="gold">متوسط الدرجات</small>
+                  <div className="score">
+                    {averageScore.toFixed(1)}%
                   </div>
+                </div>
+              </div>
+
+              {loadingParticipations ? (
+                <Note>جارٍ تحميل سجل المشاركات…</Note>
+              ) : participations.length ? (
+                participations.map(participation => (
+                  <article className="review" key={participation.id}>
+                    <b>{participation.full_name}</b>
+
+                    <p>
+                      الدرجة: {participation.score} / {participation.total}
+                    </p>
+
+                    <p>
+                      مجموعة الأسئلة: {participation.set_title}
+                    </p>
+
+                    <small>
+                      تاريخ المشاركة: {formatDate(participation.completed_at)}
+                    </small>
+
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ marginTop: '12px' }}
+                      onClick={() => openParticipation(participation)}
+                    >
+                      عرض تفاصيل الإجابات
+                    </button>
+                  </article>
                 ))
               ) : (
-                <Note>لا توجد مشاركات محفوظة حتى الآن.</Note>
+                <Note>لا توجد مشاركات مسجلة حتى الآن.</Note>
               )}
             </section>
-
-            {/* تفاصيل إجابات المشارك */}
 
             {selectedParticipation && (
               <section className="card">
@@ -988,27 +979,26 @@ function Admin() {
                   <h2>تفاصيل المشاركة</h2>
 
                   <button
-                    className="mini"
                     type="button"
+                    className="mini"
                     onClick={() => {
                       setSelectedParticipation(null)
                       setParticipationAnswers([])
                     }}
                   >
-                    إغلاق
+                    إغلاق التفاصيل
                   </button>
                 </div>
 
                 <h3>{selectedParticipation.full_name}</h3>
 
                 <p>
-                  النتيجة: {selectedParticipation.score} من{' '}
-                  {selectedParticipation.total}
+                  الدرجة: {selectedParticipation.score} / {selectedParticipation.total}
                 </p>
 
-                <small className="muted">
-                  {formatDate(selectedParticipation.completed_at)}
-                </small>
+                <p>
+                  تاريخ المشاركة: {formatDate(selectedParticipation.completed_at)}
+                </p>
 
                 {loadingAnswers ? (
                   <Note>جارٍ تحميل الإجابات…</Note>
@@ -1016,60 +1006,66 @@ function Admin() {
                   participationAnswers.map((answer, index) => (
                     <article className="review" key={answer.id}>
                       <b>
-                        السؤال {index + 1}:{' '}
-                        {answer.is_correct
-                          ? 'إجابة صحيحة'
-                          : 'إجابة غير صحيحة'}
+                        السؤال {index + 1}
+                        {' — '}
+                        {answer.is_correct ? 'إجابة صحيحة' : 'إجابة غير صحيحة'}
                       </b>
 
                       <p>
-                        {answer.questions?.body || 'نص السؤال غير متاح'}
+                        {answer.questions?.body || 'نص السؤال غير متوفر'}
                       </p>
 
                       <p>
-                        إجابتك: {answer.options?.label || 'غير متاحة'}
+                        إجابة المشارك:{' '}
+                        {answer.options?.label || 'غير متوفرة'}
                       </p>
 
                       <p>
-                        {answer.questions?.explanation || ''}
+                        النتيجة:{' '}
+                        {answer.is_correct ? 'صحيح' : 'غير صحيح'}
                       </p>
+
+                      {answer.questions?.explanation && (
+                        <p>
+                          التفسير: {answer.questions.explanation}
+                        </p>
+                      )}
 
                       {answer.questions?.law_name && (
-                        <small>
-                          {answer.questions.law_name}{' '}
-                          {answer.questions.article_number || ''}
-                        </small>
+                        <p>
+                          النظام: {answer.questions.law_name}
+                        </p>
+                      )}
+
+                      {answer.questions?.article_number && (
+                        <p>
+                          المادة: {answer.questions.article_number}
+                        </p>
                       )}
 
                       {answer.questions?.source_url && (
-                        <p>
-                          <a
-                            href={answer.questions.source_url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            المصدر الرسمي
-                          </a>
-                        </p>
+                        <a
+                          href={answer.questions.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          فتح المصدر الرسمي
+                        </a>
                       )}
                     </article>
                   ))
                 ) : (
-                  <Note>لا توجد تفاصيل إجابات لهذه المشاركة.</Note>
+                  <Note>لم يتم العثور على تفاصيل إجابات هذه المشاركة.</Note>
                 )}
               </section>
             )}
-
-            {/* إدارة مجموعات الأسئلة */}
 
             <section className="card">
               <h2>مجموعات الأسئلة</h2>
 
               {sets.map(set => (
                 <div className="leader" key={set.id}>
-                  <span>
-                    {set.title} — {set.status}
-                  </span>
+                  <span>{set.title} — {set.status}</span>
 
                   <div className="actions">
                     <button
@@ -1099,8 +1095,6 @@ function Admin() {
               ))}
             </section>
 
-            {/* إدارة أسئلة المجموعة */}
-
             {activeSet && (
               <section className="card form">
                 <div
@@ -1125,20 +1119,14 @@ function Admin() {
 
                 {questions.map((question, index) => (
                   <article className="review" key={question.id}>
-                    <b>
-                      {index + 1}. {question.body}
-                    </b>
-
+                    <b>{index + 1}. {question.body}</b>
                     <p>
                       الإجابة الصحيحة:{' '}
-                      {question.options?.find(
-                        option => option.is_correct
-                      )?.label || 'غير محددة'}
+                      {question.options?.find(option => option.is_correct)?.label ||
+                        'غير محددة'}
                     </p>
-
                     <small>
-                      {question.law_name || ''}{' '}
-                      {question.article_number || ''}
+                      {question.law_name || ''} {question.article_number || ''}
                     </small>
                   </article>
                 ))}
@@ -1189,7 +1177,6 @@ function Admin() {
                 {options.map((option, index) => (
                   <label key={index}>
                     الخيار {index + 1}
-
                     <input
                       value={option}
                       onChange={event =>
@@ -1208,7 +1195,6 @@ function Admin() {
 
                 <label>
                   الإجابة الصحيحة
-
                   <select
                     value={correctIndex}
                     onChange={event => setCorrectIndex(event.target.value)}
@@ -1223,7 +1209,6 @@ function Admin() {
 
                 <label>
                   تفسير الإجابة
-
                   <textarea
                     value={explanation}
                     onChange={event => setExplanation(event.target.value)}
@@ -1249,8 +1234,6 @@ function Admin() {
     </Shell>
   )
 }
-
-/* تشغيل الصفحات */
 
 export default function App() {
   const { pathname } = useLocation()
