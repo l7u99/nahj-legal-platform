@@ -470,7 +470,8 @@ function Admin() {
       return
     }
 
-    const rows = (data || []).map(item => ({
+    // ترتيب آخر 500 مشاركة من الأقدم إلى الأحدث لعرض أرقام متسلسلة.
+    const rows = (data || []).reverse().map(item => ({
       ...item,
       set_title: sets.find(set => set.id === item.set_id)?.title || 'مجموعة أسئلة'
     }))
