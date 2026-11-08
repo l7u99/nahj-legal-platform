@@ -813,7 +813,7 @@ function Admin() {
                 return filtered.length ? (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', textAlign: 'right' }}>
-                      <thead><tr>{['#', 'الاسم الثلاثي', 'رقم الجوال', 'الإجابة المختارة', 'الحالة', 'الدرجة', 'التفاصيل'].map(label => <th key={label} style={{ color: '#c7a96b', padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.4)', whiteSpace: 'nowrap' }}>{label}</th>)}</tr></thead>
+                      <thead><tr>{['#', 'الاسم الثلاثي', 'رقم الجوال', 'الحالة', 'الدرجة', 'التفاصيل'].map(label => <th key={label} style={{ color: '#c7a96b', padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.4)', whiteSpace: 'nowrap' }}>{label}</th>)}</tr></thead>
                       <tbody>{filtered.map((row, index) => {
                         const summary = answerSummaries[row.id]
                         const isPerfect = Number(row.total) > 0 && Number(row.score) === Number(row.total)
@@ -821,7 +821,6 @@ function Admin() {
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)' }}>{index + 1}</td>
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', minWidth: 140 }}>{row.full_name}</td>
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}>{row.phone || '—'}</td>
-                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', minWidth: 150 }}>{summary?.labels?.length ? summary.labels.join('، ') : '—'}</td>
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', padding: '5px 10px', borderRadius: 9, background: isPerfect ? 'rgba(35,185,145,.16)' : 'rgba(190,145,70,.14)', color: isPerfect ? '#54d6b3' : '#d6b66e' }}>{isPerfect ? 'صحيحة' : 'غير مكتملة'}</span></td>
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}>{row.score} / {row.total}</td>
                           <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)' }}><button type="button" className="mini" onClick={() => openParticipation(row)}>عرض</button></td>
