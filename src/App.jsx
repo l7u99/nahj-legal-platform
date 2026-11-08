@@ -396,6 +396,11 @@ function Admin() {
   const [participationCount, setParticipationCount] = useState(0)
   const [averageScore, setAverageScore] = useState(0)
   const [loadingParticipations, setLoadingParticipations] = useState(false)
+  const [participantSearch, setParticipantSearch] = useState('')
+  const [answerSummaries, setAnswerSummaries] = useState({})
+  const [topTen, setTopTen] = useState([])
+  const [loadingTopTen, setLoadingTopTen] = useState(false)
+  const [topTenError, setTopTenError] = useState('')
   const [selectedParticipation, setSelectedParticipation] = useState(null)
   const [participationAnswers, setParticipationAnswers] = useState([])
   const [loadingAnswers, setLoadingAnswers] = useState(false)
@@ -441,8 +446,6 @@ function Admin() {
   async function loadParticipations() {
     setLoadingParticipations(true)
     setErrorMessage('')
-    setSelectedParticipation(null)
-    setParticipationAnswers([])
 
     const { count, error: countError } = await db
       .from('participations')
@@ -453,7 +456,6 @@ function Admin() {
       setLoadingParticipations(false)
       return
     }
-
     setParticipationCount(count || 0)
 
     const { data, error } = await db
@@ -472,19 +474,55 @@ function Admin() {
       ...item,
       set_title: sets.find(set => set.id === item.set_id)?.title || 'مجموعة أسئلة'
     }))
-
     setParticipations(rows)
 
-    const percentages = rows
-      .filter(row => Number(row.total) > 0)
-      .map(row => (Number(row.score) / Number(row.total)) * 100)
+    if (rows.length) {
+      const { data: answerRows, error: answersError } = await db
+        .from('participation_answers')
+        .select('participation_id,is_correct,options(label)')
+        .in('participation_id', rows.map(row => row.id))
 
-    setAverageScore(
-      percentages.length
-        ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length
-        : 0
-    )
+      if (answersError) {
+        console.error('تعذر تحميل ملخص الإجابات:', answersError)
+        setAnswerSummaries({})
+      } else {
+        const summaries = {}
+        ;(answerRows || []).forEach(answer => {
+          if (!summaries[answer.participation_id]) summaries[answer.participation_id] = { labels: [], correct: 0, total: 0 }
+          summaries[answer.participation_id].total += 1
+          if (answer.is_correct) summaries[answer.participation_id].correct += 1
+          if (answer.options?.label) summaries[answer.participation_id].labels.push(answer.options.label)
+        })
+        setAnswerSummaries(summaries)
+      }
+    } else {
+      setAnswerSummaries({})
+    }
+
+    const percentages = rows.filter(row => Number(row.total) > 0)
+      .map(row => (Number(row.score) / Number(row.total)) * 100)
+    setAverageScore(percentages.length ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length : 0)
     setLoadingParticipations(false)
+  }
+
+  async function loadTopTen() {
+    setLoadingTopTen(true)
+    setTopTenError('')
+    const { data, error } = await db
+      .from('admin_top_ten_perfect_participants')
+      .select('id,full_name,score,total,completed_at')
+      .order('completed_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(10)
+
+    if (error) {
+      console.error('Top ten error:', error)
+      setTopTenError('تعذر تحميل العشرة الأوائل. نفّذي استعلام إعداد القائمة أولًا.')
+      setTopTen([])
+    } else {
+      setTopTen((data || []).filter(row => Number(row.total) > 0 && Number(row.score) === Number(row.total)))
+    }
+    setLoadingTopTen(false)
   }
 
   async function openParticipation(participation) {
@@ -546,7 +584,10 @@ function Admin() {
   }, [session])
 
   useEffect(() => {
-    if (session) loadParticipations()
+    if (session) {
+      loadParticipations()
+      loadTopTen()
+    }
   }, [session, sets])
 
   async function addSet(event) {
@@ -666,13 +707,7 @@ function Admin() {
       return
     }
 
-    setNotice(
-      status === 'published'
-        ? 'تم نشر المجموعة.'
-        : status === 'archived'
-          ? 'تمت أرشفة المجموعة.'
-          : 'تمت إعادة المجموعة إلى المسودات.'
-    )
+    setNotice(status === 'published' ? 'تم نشر المجموعة.' : 'تمت أرشفة المجموعة.')
     await loadSets()
   }
 
@@ -729,9 +764,7 @@ function Admin() {
             <section className="card">
               <div className="actions" style={{ justifyContent: 'space-between' }}>
                 <h2>إحصائيات المشاركات</h2>
-                <button type="button" className="mini" onClick={loadParticipations}>
-                  تحديث الإحصائيات
-                </button>
+                <button type="button" className="mini" onClick={() => { loadParticipations(); loadTopTen() }} disabled={loadingParticipations || loadingTopTen}>تحديث البيانات</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 14 }}>
                 <div style={{ textAlign: 'center', padding: '16px 10px', border: '1px solid rgba(185, 148, 82, 0.28)', borderRadius: 14, background: 'rgba(185, 148, 82, 0.06)', minWidth: 0 }}>
@@ -746,36 +779,58 @@ function Admin() {
             </section>
 
             <section className="card">
-              <div className="actions" style={{ justifyContent: 'space-between' }}>
-                <h2>سجل المشاركات</h2>
-                <button type="button" className="mini" onClick={loadParticipations} disabled={loadingParticipations}>
-                  تحديث السجل
-                </button>
+              <div className="actions" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <h2 style={{ marginBottom: 4 }}>العشرة الأوائل</h2>
+                  <small className="gold">أول عشرة مشاركين يحققون الدرجة الكاملة حسب وقت إكمال المشاركة</small>
+                </div>
+                <button type="button" className="mini" onClick={loadTopTen} disabled={loadingTopTen}>تحديث القائمة</button>
               </div>
+              {loadingTopTen ? <Note>جارٍ تحميل العشرة الأوائل…</Note> : topTenError ? <Note>{topTenError}</Note> : topTen.length ? (
+                <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                  <table style={{ width: '100%', minWidth: 460, borderCollapse: 'collapse', textAlign: 'right' }}>
+                    <thead><tr>{['الترتيب', 'الاسم', 'النتيجة', 'وقت الإكمال'].map(label => <th key={label} style={{ color: '#c7a96b', padding: '12px 10px', borderBottom: '1px solid rgba(199,169,107,.35)', whiteSpace: 'nowrap' }}>{label}</th>)}</tr></thead>
+                    <tbody>{topTen.map((row, index) => <tr key={row.id}>
+                      <td style={{ padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.16)' }}>{index + 1}</td>
+                      <td style={{ padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.16)' }}>{row.full_name}</td>
+                      <td style={{ padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.16)', whiteSpace: 'nowrap' }}>{row.score} / {row.total}</td>
+                      <td style={{ padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.16)', whiteSpace: 'nowrap' }}>{formatDate(row.completed_at)}</td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+              ) : <Note>لا يوجد مشاركون حققوا الدرجة الكاملة حتى الآن.</Note>}
+            </section>
 
-              {loadingParticipations ? (
-                <Note>جارٍ تحميل سجل المشاركات…</Note>
-              ) : participations.length ? (
-                participations.map((participation, index) => (
-                  <article className="review" key={participation.id}>
-                    <b>{index + 1}. {participation.full_name}</b>
-                    <p>رقم الجوال: <a href={`tel:${participation.phone}`}>{participation.phone || 'غير محفوظ للمشاركات السابقة'}</a></p>
-                    <p>الدرجة: {participation.score} / {participation.total}</p>
-                    <p>مجموعة الأسئلة: {participation.set_title}</p>
-                    <small>تاريخ المشاركة: {formatDate(participation.completed_at)}</small>
-                    <button
-                      type="button"
-                      className="btn"
-                      style={{ marginTop: 12 }}
-                      onClick={() => openParticipation(participation)}
-                    >
-                      عرض تفاصيل الإجابات
-                    </button>
-                  </article>
-                ))
-              ) : (
-                <Note>لا توجد مشاركات مسجلة حتى الآن.</Note>
-              )}
+            <section className="card">
+              <div className="actions" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+                <h2>سجل المشاركات</h2>
+                <button type="button" className="mini" onClick={loadParticipations} disabled={loadingParticipations}>تحديث السجل</button>
+              </div>
+              <input type="search" value={participantSearch} onChange={event => setParticipantSearch(event.target.value)} placeholder="بحث بالاسم أو رقم الجوال…" aria-label="بحث بالاسم أو رقم الجوال" style={{ width: '100%', margin: '14px 0 18px', boxSizing: 'border-box' }} />
+              {loadingParticipations ? <Note>جارٍ تحميل سجل المشاركات…</Note> : (() => {
+                const term = participantSearch.trim().toLowerCase()
+                const filtered = participations.filter(row => (row.full_name || '').toLowerCase().includes(term) || (row.phone || '').includes(term))
+                return filtered.length ? (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', textAlign: 'right' }}>
+                      <thead><tr>{['#', 'الاسم الثلاثي', 'رقم الجوال', 'الإجابة المختارة', 'الحالة', 'الدرجة', 'التفاصيل'].map(label => <th key={label} style={{ color: '#c7a96b', padding: '13px 10px', borderBottom: '1px solid rgba(199,169,107,.4)', whiteSpace: 'nowrap' }}>{label}</th>)}</tr></thead>
+                      <tbody>{filtered.map((row, index) => {
+                        const summary = answerSummaries[row.id]
+                        const isPerfect = Number(row.total) > 0 && Number(row.score) === Number(row.total)
+                        return <tr key={row.id}>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)' }}>{index + 1}</td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', minWidth: 140 }}>{row.full_name}</td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}>{row.phone || '—'}</td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', minWidth: 150 }}>{summary?.labels?.length ? summary.labels.join('، ') : '—'}</td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', padding: '5px 10px', borderRadius: 9, background: isPerfect ? 'rgba(35,185,145,.16)' : 'rgba(190,145,70,.14)', color: isPerfect ? '#54d6b3' : '#d6b66e' }}>{isPerfect ? 'صحيحة' : 'غير مكتملة'}</span></td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)', whiteSpace: 'nowrap' }}>{row.score} / {row.total}</td>
+                          <td style={{ padding: '15px 10px', borderBottom: '1px solid rgba(199,169,107,.18)' }}><button type="button" className="mini" onClick={() => openParticipation(row)}>عرض</button></td>
+                        </tr>
+                      })}</tbody>
+                    </table>
+                  </div>
+                ) : <Note>{participations.length ? 'لا توجد نتائج مطابقة للبحث.' : 'لا توجد مشاركات مسجلة حتى الآن.'}</Note>
+              })()}
             </section>
 
             {selectedParticipation && (
