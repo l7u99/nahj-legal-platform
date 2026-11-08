@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
@@ -18,7 +19,6 @@ function Header() {
       </Link>
       <nav>
         <Link to="/">الرئيسية</Link>
-        <Link to="/leaders">المتصدرون</Link>
         <Link to="/admin">دخول المسؤولين</Link>
       </nav>
     </header>
@@ -92,7 +92,7 @@ function Home() {
             <div className="chips">
               <span>أسئلة موثقة</span>
               <span>نتيجة فورية</span>
-              <span>متصدرون أسبوعيًا</span>
+              <span>مراجعة فورية للإجابات</span>
             </div>
           </section>
 
@@ -119,90 +119,6 @@ function Home() {
   )
 }
 
-function Leaders() {
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
-
-  useEffect(() => {
-    if (!ready) {
-      setLoading(false)
-      return
-    }
-
-    async function loadLeaders() {
-      const { data, error } = await db
-        .from('weekly_leaderboard_names')
-        .select('full_name,score,total,completed_at')
-        .order('score', { ascending: false })
-        .order('completed_at', { ascending: true })
-        .limit(10)
-
-      if (error) {
-        console.error('Leaderboard error:', error)
-        setErrorMessage('تعذر تحميل قائمة المتصدرين.')
-      } else {
-        setRows(data || [])
-      }
-      setLoading(false)
-    }
-
-    loadLeaders()
-  }, [])
-
-  return (
-    <Shell>
-      <main className="narrow">
-        <Hero
-          title="العشرة الأوائل"
-          desc="التميّز القانوني يبدأ بالمعرفة."
-        />
-        <section className="card">
-          <h2>قائمة المتصدرين الأسبوعية</h2>
-
-          {loading ? (
-            <Note>جارٍ تحميل القائمة…</Note>
-          ) : errorMessage ? (
-            <Note>{errorMessage}</Note>
-          ) : rows.length ? (
-            rows.map((row, index) => (
-              <div
-                className="leader"
-                key={`${row.full_name}-${index}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 16,
-                  flexWrap: 'wrap'
-                }}
-              >
-                <b
-                  style={{
-                    whiteSpace: 'normal',
-                    overflowWrap: 'anywhere',
-                    wordBreak: 'normal',
-                    textAlign: 'right',
-                    flex: '1 1 220px',
-                    minWidth: 0
-                  }}
-                >
-                  {index + 1}. {row.full_name || 'مشارك'}
-                </b>
-                <strong style={{ flexShrink: 0 }}>
-                  {row.score} / {row.total}
-                </strong>
-              </div>
-            ))
-          ) : (
-            <Note>لا يوجد متصدرون لهذا الأسبوع حتى الآن.</Note>
-          )}
-        </section>
-      </main>
-    </Shell>
-  )
-}
-
 function Participate() {
   const { pathname } = useLocation()
   const pathParts = pathname.split('/').filter(Boolean)
@@ -220,7 +136,6 @@ function Participate() {
   const [errorMessage, setErrorMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // يمنع الضغط المتكرر ويحتفظ بمعرّف واحد للمحاولة الحالية.
   const submittingRef = useRef(false)
   const submissionTokenRef = useRef(crypto.randomUUID())
 
@@ -281,7 +196,6 @@ function Participate() {
   }, [id])
 
   async function submitAnswers() {
-    // الحماية الأولى: منع أي طلب ثانٍ أثناء تنفيذ الطلب الأول.
     if (submittingRef.current) return
 
     if (Object.keys(answers).length !== questions.length) {
@@ -430,6 +344,8 @@ function Participate() {
                 <p>إجابتك: {detail.selected}</p>
                 <p>الإجابة الصحيحة: {detail.correct}</p>
                 <p>{detail.explanation}</p>
+                {detail.law_name && <p>النظام: {detail.law_name}</p>}
+                {detail.article_number && <p>رقم المادة: {detail.article_number}</p>}
                 {detail.source_url && (
                   <a href={detail.source_url} target="_blank" rel="noreferrer">
                     المصدر الرسمي
@@ -443,6 +359,23 @@ function Participate() {
       </main>
     </Shell>
   )
+}
+
+const adminTh = {
+  padding: '12px 9px',
+  borderBottom: '1px solid rgba(220,190,110,.35)',
+  color: '#d7bd70',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  textAlign: 'right'
+}
+
+const adminTd = {
+  padding: '12px 9px',
+  borderBottom: '1px solid rgba(255,255,255,.09)',
+  color: 'inherit',
+  verticalAlign: 'middle',
+  whiteSpace: 'nowrap'
 }
 
 function Admin() {
@@ -469,6 +402,10 @@ function Admin() {
   const [participationCount, setParticipationCount] = useState(0)
   const [averageScore, setAverageScore] = useState(0)
   const [loadingParticipations, setLoadingParticipations] = useState(false)
+  const [participantSearch, setParticipantSearch] = useState('')
+  const [participantPage, setParticipantPage] = useState(0)
+  const [perfectLeaders, setPerfectLeaders] = useState([])
+  const [loadingPerfectLeaders, setLoadingPerfectLeaders] = useState(false)
   const [selectedParticipation, setSelectedParticipation] = useState(null)
   const [participationAnswers, setParticipationAnswers] = useState([])
   const [loadingAnswers, setLoadingAnswers] = useState(false)
@@ -517,23 +454,22 @@ function Admin() {
     setSelectedParticipation(null)
     setParticipationAnswers([])
 
-    const { count, error: countError } = await db
-      .from('participations')
-      .select('id', { count: 'exact', head: true })
+    const pageSize = 25
+    const from = participantPage * pageSize
+    const to = from + pageSize - 1
 
-    if (countError) {
-      setErrorMessage('تعذر تحميل عدد المشاركات: ' + countError.message)
-      setLoadingParticipations(false)
-      return
+    let query = db
+      .from('participations')
+      .select('id,set_id,full_name,phone,score,total,completed_at', { count: 'exact' })
+
+    const searchTerm = participantSearch.trim().replace(/[(),]/g, ' ')
+    if (searchTerm) {
+      query = query.or(`full_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
     }
 
-    setParticipationCount(count || 0)
-
-    const { data, error } = await db
-      .from('participations')
-      .select('id,set_id,full_name,phone,score,total,completed_at')
-      .order('completed_at', { ascending: false })
-      .limit(500)
+    const { data, count, error } = await query
+      .order('completed_at', { ascending: true })
+      .range(from, to)
 
     if (error) {
       setErrorMessage('تعذر تحميل سجل المشاركات: ' + error.message)
@@ -541,23 +477,39 @@ function Admin() {
       return
     }
 
+    setParticipationCount(count || 0)
     const rows = (data || []).map(item => ({
       ...item,
       set_title: sets.find(set => set.id === item.set_id)?.title || 'مجموعة أسئلة'
     }))
-
     setParticipations(rows)
 
-    const percentages = rows
-      .filter(row => Number(row.total) > 0)
-      .map(row => (Number(row.score) / Number(row.total)) * 100)
+    const valid = rows.filter(row => Number(row.total) > 0)
+    setAverageScore(valid.length
+      ? valid.reduce((sum, row) => sum + (Number(row.score) / Number(row.total)) * 100, 0) / valid.length
+      : 0)
 
-    setAverageScore(
-      percentages.length
-        ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length
-        : 0
-    )
     setLoadingParticipations(false)
+  }
+
+  async function loadPerfectLeaders() {
+    setLoadingPerfectLeaders(true)
+    const { data, error } = await db
+      .from('participations')
+      .select('id,full_name,score,total,completed_at,set_id')
+      .eq('score', 3)
+      .eq('total', 3)
+      .order('completed_at', { ascending: true })
+      .limit(10)
+
+    if (error) {
+      console.error('Perfect leaders error:', error)
+      setErrorMessage('تعذر تحميل أوائل الدرجة الكاملة: ' + error.message)
+      setPerfectLeaders([])
+    } else {
+      setPerfectLeaders(data || [])
+    }
+    setLoadingPerfectLeaders(false)
   }
 
   async function openParticipation(participation) {
@@ -619,8 +571,11 @@ function Admin() {
   }, [session])
 
   useEffect(() => {
-    if (session) loadParticipations()
-  }, [session, sets])
+    if (session) {
+      loadParticipations()
+      loadPerfectLeaders()
+    }
+  }, [session, sets, participantPage, participantSearch])
 
   async function addSet(event) {
     event.preventDefault()
@@ -794,10 +749,51 @@ function Admin() {
             {notice && <Note>{notice}</Note>}
 
             <section className="card">
-              <div className="actions" style={{ justifyContent: 'space-between' }}>
+              <h2>أوائل الدرجة الكاملة</h2>
+              <p className="muted">أول عشرة مشاركين أتمّوا الأسئلة الثلاثة بإجابات صحيحة، حسب أسبقية وقت الإكمال.</p>
+              {loadingPerfectLeaders ? (
+                <Note>جارٍ تحميل القائمة…</Note>
+              ) : perfectLeaders.length ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420, fontSize: 14 }}>
+                    <thead>
+                      <tr>
+                        <th style={adminTh}>#</th>
+                        <th style={adminTh}>الاسم الثلاثي</th>
+                        <th style={adminTh}>الدرجة</th>
+                        <th style={adminTh}>وقت الإكمال</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {perfectLeaders.map((person, index) => (
+                        <tr key={person.id}>
+                          <td style={adminTd}>{index + 1}</td>
+                          <td style={adminTd}>{person.full_name}</td>
+                          <td style={adminTd}>3 / 3</td>
+                          <td style={adminTd}>{formatDate(person.completed_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <Note>لم يحقق أحد الدرجة الكاملة حتى الآن.</Note>
+              )}
+            </section>
+
+            <section className="card">
+              <div className="actions" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
                 <h2>إحصائيات المشاركات</h2>
-                <button type="button" className="mini" onClick={loadParticipations}>
-                  تحديث الإحصائيات
+                <button
+                  type="button"
+                  className="mini"
+                  onClick={() => {
+                    loadParticipations()
+                    loadPerfectLeaders()
+                  }}
+                  disabled={loadingParticipations}
+                >
+                  تحديث السجلات
                 </button>
               </div>
               <div className="cols">
@@ -806,42 +802,94 @@ function Admin() {
                   <div className="score">{participationCount}</div>
                 </div>
                 <div className="card center">
-                  <small className="gold">متوسط الدرجات</small>
+                  <small className="gold">متوسط درجات الصفحة</small>
                   <div className="score">{averageScore.toFixed(1)}%</div>
                 </div>
               </div>
             </section>
 
             <section className="card">
-              <div className="actions" style={{ justifyContent: 'space-between' }}>
-                <h2>سجل المشاركات</h2>
-                <button type="button" className="mini" onClick={loadParticipations} disabled={loadingParticipations}>
-                  تحديث السجل
-                </button>
+              <div className="actions" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <h2>سجل جميع المشاركات</h2>
+                <small className="muted">{participationCount} مشاركة</small>
               </div>
+
+              <input
+                value={participantSearch}
+                onChange={event => {
+                  setParticipantSearch(event.target.value)
+                  setParticipantPage(0)
+                }}
+                placeholder="بحث بالاسم أو رقم الجوال…"
+                aria-label="بحث بالاسم أو رقم الجوال"
+                style={{ width: '100%', margin: '12px 0 20px' }}
+              />
 
               {loadingParticipations ? (
                 <Note>جارٍ تحميل سجل المشاركات…</Note>
               ) : participations.length ? (
-                participations.map((participation, index) => (
-                  <article className="review" key={participation.id}>
-                    <b>{index + 1}. {participation.full_name}</b>
-                    <p>رقم الجوال: <a href={`tel:${participation.phone}`}>{participation.phone || 'غير محفوظ للمشاركات السابقة'}</a></p>
-                    <p>الدرجة: {participation.score} / {participation.total}</p>
-                    <p>مجموعة الأسئلة: {participation.set_title}</p>
-                    <small>تاريخ المشاركة: {formatDate(participation.completed_at)}</small>
+                <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, fontSize: 13, textAlign: 'right' }}>
+                      <thead>
+                        <tr>
+                          <th style={adminTh}>#</th>
+                          <th style={adminTh}>الاسم الثلاثي</th>
+                          <th style={adminTh}>رقم الجوال</th>
+                          <th style={adminTh}>الدرجة</th>
+                          <th style={adminTh}>تاريخ المشاركة</th>
+                          <th style={adminTh}>الحالة</th>
+                          <th style={adminTh}>التفاصيل</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {participations.map((person, index) => (
+                          <tr key={person.id}>
+                            <td style={adminTd}>{participantPage * 25 + index + 1}</td>
+                            <td style={{ ...adminTd, minWidth: 150, whiteSpace: 'normal' }}>{person.full_name}</td>
+                            <td style={adminTd} dir="ltr">{person.phone || '—'}</td>
+                            <td style={adminTd}>{person.score} / {person.total}</td>
+                            <td style={{ ...adminTd, minWidth: 150 }}>{formatDate(person.completed_at)}</td>
+                            <td style={adminTd}>
+                              <span style={{ color: Number(person.score) === Number(person.total) ? '#4bd6b0' : '#e5c56b' }}>
+                                {Number(person.score) === Number(person.total) ? 'درجة كاملة' : 'مشاركة مكتملة'}
+                              </span>
+                            </td>
+                            <td style={adminTd}>
+                              <button type="button" className="mini" onClick={() => openParticipation(person)}>
+                                عرض
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="actions" style={{ justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', marginTop: 22, gap: 8 }}>
                     <button
                       type="button"
-                      className="btn"
-                      style={{ marginTop: 12 }}
-                      onClick={() => openParticipation(participation)}
+                      className="mini"
+                      disabled={participantPage === 0 || loadingParticipations}
+                      onClick={() => setParticipantPage(page => Math.max(0, page - 1))}
                     >
-                      عرض تفاصيل الإجابات
+                      السابق
                     </button>
-                  </article>
-                ))
+                    <span className="muted" style={{ padding: '0 10px', fontSize: 13 }}>
+                      صفحة {participantPage + 1} من {Math.max(1, Math.ceil(participationCount / 25))}
+                    </span>
+                    <button
+                      type="button"
+                      className="mini"
+                      disabled={(participantPage + 1) * 25 >= participationCount || loadingParticipations}
+                      onClick={() => setParticipantPage(page => page + 1)}
+                    >
+                      التالي
+                    </button>
+                  </div>
+                </>
               ) : (
-                <Note>لا توجد مشاركات مسجلة حتى الآن.</Note>
+                <Note>{participantSearch ? 'لا توجد نتائج مطابقة للبحث.' : 'لا توجد مشاركات مسجلة حتى الآن.'}</Note>
               )}
             </section>
 
@@ -1013,7 +1061,7 @@ export default function App() {
     : pathname
 
   if (path.startsWith('/participate/')) return <Participate />
-  if (path === '/leaders') return <Leaders />
+  if (path === '/leaders') return <Home />
   if (path === '/admin') return <Admin />
   return <Home />
 }
