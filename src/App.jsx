@@ -462,7 +462,7 @@ function Admin() {
       .from('participations')
       .select('id,set_id,full_name,phone,score,total,completed_at')
       .order('completed_at', { ascending: false })
-      .limit(500)
+      .limit(1000)
 
     if (error) {
       setErrorMessage('تعذر تحميل سجل المشاركات: ' + error.message)
@@ -470,7 +470,7 @@ function Admin() {
       return
     }
 
-    // ترتيب آخر 500 مشاركة من الأقدم إلى الأحدث لعرض أرقام متسلسلة.
+    // ترتيب المشاركات المعروضة من الأقدم إلى الأحدث لعرض أرقام متسلسلة.
     const rows = (data || []).reverse().map(item => ({
       ...item,
       set_title: sets.find(set => set.id === item.set_id)?.title || 'مجموعة أسئلة'
@@ -773,7 +773,7 @@ function Admin() {
                   <div style={{ fontSize: 'clamp(25px, 5vw, 34px)', fontWeight: 800, lineHeight: 1.3, marginTop: 5 }}>{participationCount.toLocaleString('ar-SA')}</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '16px 10px', border: '1px solid rgba(185, 148, 82, 0.28)', borderRadius: 14, background: 'rgba(185, 148, 82, 0.06)', minWidth: 0 }}>
-                  <small className="gold" style={{ display: 'block', fontSize: 12 }}>متوسط آخر 500 مشاركة</small>
+                  <small className="gold" style={{ display: 'block', fontSize: 12 }}>متوسط المشاركات المعروضة</small>
                   <div style={{ fontSize: 'clamp(25px, 5vw, 34px)', fontWeight: 800, lineHeight: 1.3, marginTop: 5 }}>{averageScore.toFixed(1)}%</div>
                 </div>
               </div>
