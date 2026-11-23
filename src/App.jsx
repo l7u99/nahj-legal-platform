@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
@@ -116,6 +115,15 @@ function Home() {
             <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
           </section>
         </div>
+
+        <section className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <small className="gold">قريبًا في نهج القانوني</small>
+            <h2 style={{ margin: '6px 0' }}>انتظروا الجديد!</h2>
+            <p style={{ margin: 0 }}>نحضّر لكم تجربة جديدة ومفاجأة تستحق الانتظار.</p>
+          </div>
+          <Link className="btn" to="/coming-soon">استعراض ←</Link>
+        </section>
 
         <section className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -998,6 +1006,25 @@ function Admin() {
   )
 }
 
+
+function ComingSoon() {
+  return (
+    <Shell>
+      <main className="narrow">
+        <Hero title="انتظروا جديد نهج القانوني" desc="نطوّر تجربتكم، والقادم أجمل." />
+        <section className="card center" style={{ padding: '42px 28px' }}>
+          <div className="seal" aria-hidden="true">✦</div>
+          <h2 style={{ color: '#e0c78b', margin: '14px 0' }}>
+            لأننا شفنا حماسكم، طورنا الموقع أكثر، وفيه مفاجأة بالطريق 🤩
+          </h2>
+          <p>ترقّبوا جديد نهج القانوني… قريبًا.</p>
+          <Link className="btn" to="/">العودة للرئيسية</Link>
+        </section>
+      </main>
+    </Shell>
+  )
+}
+
 export default function App() {
   const { pathname } = useLocation()
   const basePath = import.meta.env.BASE_URL || '/'
@@ -1007,6 +1034,7 @@ export default function App() {
 
   if (path.startsWith('/participate/')) return <Participate />
   if (path === '/archive') return <Archive />
+  if (path === '/coming-soon') return <ComingSoon />
   if (path === '/admin') return <Admin />
   return <Home />
 }
