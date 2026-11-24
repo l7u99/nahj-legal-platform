@@ -14,6 +14,7 @@ export default function AdvocacyAdmin() {
   const [activeCase, setActiveCase] = useState(null)
   const [stages, setStages] = useState([])
   const [submissions, setSubmissions] = useState([])
+  const [allSubmissions, setAllSubmissions] = useState([])
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -32,7 +33,14 @@ export default function AdvocacyAdmin() {
     setLoading(true); setError('')
     const { data, error } = await db.from('advocacy_cases').select('*').order('created_at', { ascending: false })
     if (error) setError('تعذر تحميل قضايا المرافعة: ' + error.message)
-    else setCases(data || [])
+    else {
+      setCases(data || [])
+      const { data: rows, error: rowsError } = await db.from('advocacy_submissions')
+        .select('id,case_id,full_name,answers,final_argument,objective_score,ai_score,ai_feedback,total_score,evaluation_status,submitted_at,evaluated_at,approved_at')
+        .order('submitted_at', { ascending: false })
+      if (rowsError) setError('تعذر تحميل سجل المشاركات: ' + rowsError.message)
+      else setAllSubmissions(rows || [])
+    }
     setLoading(false)
   }
 
@@ -115,6 +123,51 @@ export default function AdvocacyAdmin() {
       </section>
       <section className="card"><div className="actions" style={{justifyContent:'space-between'}}><h2>المسابقات</h2><button className="mini" type="button" onClick={loadCases}>تحديث</button></div>
         {loading ? <p>جارٍ التحميل…</p> : cases.length ? cases.map(item => <div key={item.id} className="review"><b>{item.title}</b><p>الحالة: {item.status} · أُنشئت: {dateLabel(item.created_at)}</p><button type="button" className="btn secondary" onClick={() => openCase(item)}>إدارة هذه المسابقة</button></div>) : <p>لا توجد مسابقات مرافعة بعد.</p>}
+      </section>
+      <section className="card">
+        <h2>إحصائيات المرافعة</h2>
+        <div className="cols">
+          <div className="mini"><b>إجمالي المشاركات</b><h2>{allSubmissions.length}</h2></div>
+          <div className="mini"><b>بانتظار التقييم</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
+          <div className="mini"><b>تم تقييمهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
+          <div className="mini"><b>تم اعتمادهم</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
+        </div>
+        <p className="muted">إحصائيات جميع مسابقات المرافعة فقط، مستقلة عن مسابقة الأسئلة الأسبوعية.</p>
+      </section>
+
+      <section className="card">
+        <h2>العشرة الأوائل</h2>
+        <p>ترتيب إداري للمشاركات التي لديها درجة نهائية، ولا يظهر للمتسابقين.</p>
+        {allSubmissions.filter(row => row.total_score !== null && row.total_score !== undefined)
+          .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
+          .slice(0, 10).length ? allSubmissions.filter(row => row.total_score !== null && row.total_score !== undefined)
+            .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
+            .slice(0, 10).map((row, index) => <article className="leader" key={row.id}>
+              <b>#{index + 1} · {row.full_name}</b><span>{row.total_score} / 25</span>
+              <small>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.evaluation_status}</small>
+            </article>) : <p>لا توجد نتائج مرتبة حتى الآن. سيظهر المتصدرون بعد تسجيل مشاركات وتقييمها.</p>}
+      </section>
+
+      <section className="card">
+        <h2>سجل المتسابقين ({allSubmissions.length})</h2>
+        {allSubmissions.length ? allSubmissions.map(row => <article className="review" key={row.id}>
+          <b>{row.full_name}</b><p>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.evaluation_status} · {dateLabel(row.submitted_at)}</p>
+        </article>) : <p>لا يوجد متسابقون حتى الآن.</p>}
+      </section>
+
+      <section className="card">
+        <h2>سجل المشاركات ({allSubmissions.length})</h2>
+        <p>سجل مستقل يعرض إجابات كل متسابق ومرافعته الختامية.</p>
+        {allSubmissions.length ? allSubmissions.map(row => <article className="review" key={row.id}>
+          <b>{row.full_name} · {cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'}</b>
+          <p>تاريخ الإرسال: {dateLabel(row.submitted_at)} · الحالة: {row.evaluation_status} · الدرجة: {row.total_score ?? 'بانتظار التقييم'}</p>
+          <details><summary>عرض تفاصيل المشاركة</summary>
+            <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
+            <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
+            <p>الدرجة الموضوعية: {row.objective_score} / 15 · درجة المرافعة: {row.ai_score ?? 'لم تُقيّم'} / 10</p>
+            <p>ملاحظات التقييم: {row.ai_feedback ? JSON.stringify(row.ai_feedback) : 'لا توجد'}</p>
+          </details>
+        </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
       </section>
       {activeCase && <>
         <section className="card"><h2>{activeCase.title}</h2><p>{activeCase.description}</p><div className="note">{activeCase.case_facts}</div><p>الحالة الحالية: <b>{activeCase.status}</b></p>
