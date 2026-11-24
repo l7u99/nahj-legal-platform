@@ -11,6 +11,11 @@ const stages = [
 export default function Advocacy() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [step, setStep] = useState(0)
+
+  const validName = name.trim().split(/\s+/).length >= 3
+  const validPhone = /^05\d{8}$/.test(phone)
+  const canContinue = validName && validPhone
 
   return (
     <div className="site">
@@ -34,34 +39,52 @@ export default function Advocacy() {
           <p>حلّل الوقائع، مرّ بالمراحل، ثم قدّم حجتك القانونية.</p>
         </section>
 
-        <section className="card">
-          <small className="gold">عن المسابقة</small>
-          <h2>أثبت مهارتك في التفكير والاستدلال القانوني</h2>
-          <p>تتكون المسابقة من أربع مراحل متتابعة. سيُضاف محتوى القضية وأسئلة المراحل لاحقًا بعد اعتمادها، لذلك لن تظهر الآن أي قضية أو أسئلة تجريبية.</p>
-          <div className="chips">
-            <span>٤ مراحل</span><span>مرافعة كتابية</span><span>تقييم وفق معايير عامة</span>
-          </div>
-        </section>
+        <div className="progress" aria-label="تقدم المسابقة">
+          {step === 0 ? 'الصفحة الأولى من ٥ · بيانات المتسابق' : `المرحلة ${String(step).padStart(2, '0')} من ٤`}
+        </div>
 
-        <section className="card form">
-          <h2>بيانات المتسابق</h2>
-          <label>الاسم الثلاثي
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك الثلاثي" />
-          </label>
-          <label>رقم الجوال السعودي
-            <input value={phone} maxLength="10" inputMode="numeric"
-              onChange={e => setPhone(e.target.value.replace(/\\D/g, ''))} placeholder="05XXXXXXXX" />
-          </label>
-          <div className="note">هذه واجهة أولية للتصميم فقط؛ لم يُفعّل حفظ البيانات أو إرسال المشاركة بعد.</div>
-        </section>
-
-        {stages.map(stage => (
-          <section className="card" key={stage.number}>
-            <small className="gold">المرحلة {stage.number}</small>
-            <h2>{stage.title}</h2>
-            <p>{stage.description}</p>
+        {step === 0 ? (
+          <section className="card form">
+            <small className="gold">الصفحة الأولى</small>
+            <h2>بيانات المتسابق</h2>
+            <p>أدخل بياناتك للانتقال إلى مراحل المسابقة.</p>
+            <label>الاسم الثلاثي
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك الثلاثي" />
+            </label>
+            <label>رقم الجوال السعودي
+              <input value={phone} maxLength="10" inputMode="numeric"
+                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="05XXXXXXXX" />
+            </label>
+            <div className="note">لن تنتقل للمرحلة التالية إلا بعد إدخال الاسم الثلاثي ورقم جوال صحيح.</div>
+            <button className="btn" type="button" disabled={!canContinue} onClick={() => setStep(1)}>
+              الانتقال إلى المرحلة الأولى ←
+            </button>
           </section>
-        ))}
+        ) : (
+          <section className="card">
+            <small className="gold">المرحلة {stages[step - 1].number} من ٤</small>
+            <h2>{stages[step - 1].title}</h2>
+            <p>{stages[step - 1].description}</p>
+            <div className="note">
+              هذه المرحلة لم يُضف محتواها بعد. لن تظهر أي قضية أو أسئلة افتراضية؛ ستُضاف بعد اعتمادك للمحتوى.
+            </div>
+            <div className="actions">
+              {step > 1 && (
+                <button className="btn secondary" type="button" onClick={() => setStep(step - 1)}>
+                  → المرحلة السابقة
+                </button>
+              )}
+              {step < 4 ? (
+                <button className="btn" type="button" onClick={() => setStep(step + 1)}>
+                  الانتقال إلى المرحلة التالية ←
+                </button>
+              ) : (
+                <p>وصلت إلى نهاية عرض المراحل. ستُفعّل المشاركة بعد إضافة محتوى المسابقة وربط الحفظ.</p>
+              )}
+            </div>
+          </section>
+        )}
+
         <Link className="btn secondary" to="/">العودة للرئيسية</Link>
       </main>
       <footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
