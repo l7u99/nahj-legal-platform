@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
+import AdvocacyAdmin from './AdvocacyAdmin'
 
 function Header() {
   return (
@@ -752,6 +753,11 @@ function Admin() {
           </form>
         ) : (
           <>
+            <section className="card">
+              <h2>إدارة المرافعة القانونية</h2>
+              <p>إدارة مستقلة لقضايا المرافعة ومراحلها وسجل متسابقيها.</p>
+              <Link className="btn" to="/admin/advocacy">فتح إدارة المرافعة ←</Link>
+            </section>
             <form className="card form" onSubmit={addSet}>
               <h2>إنشاء مجموعة أسئلة (مسودة)</h2>
               <label>
@@ -1018,6 +1024,7 @@ export default function App() {
   if (path.startsWith('/participate/')) return <Participate />
   if (path === '/archive') return <Archive />
   if (path === '/advocacy') return <Advocacy />
+  if (path === '/admin/advocacy') return <AdvocacyAdmin />
   if (path === '/admin') return <Admin />
   return <Home />
 }
