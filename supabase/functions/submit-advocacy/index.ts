@@ -31,8 +31,8 @@ function getServiceKey(): string {
   throw new Error("Supabase service key is missing");
 }
 
-// AI evaluation is intentionally disabled for this competition release.
-// Keep evaluate-advocacy deployed for a future budget-enabled release.
+// تم إيقاف التقييم بالذكاء الاصطناعي مؤقتًا.
+// نحتفظ بوظيفة evaluate-advocacy للمستقبل.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -115,15 +115,16 @@ Deno.serve(async (req) => {
       return response({ error: "المحاولة غير موجودة" }, 404);
     }
 
-    // إذا كان هناك تسليم سابق، نحدّث درجته وحالته دون إنشاء سجل مكرر.
     const { data: existing, error: existingError } = await supabase
       .from("advocacy_submissions")
-      .select("id,evaluation_status,total_score,ai_feedback,objective_score")
+      .select("id,evaluation_status,total_score,objective_score")
       .eq("attempt_id", attemptId)
       .maybeSingle();
 
     if (existingError) {
-      return response({ error: "تعذر التحقق من التسليم السابق" }, 500);
+      return response({
+        error: "تعذر التحقق من التسليم السابق",
+      }, 500);
     }
 
     if (existing) {
@@ -139,7 +140,11 @@ Deno.serve(async (req) => {
         .eq("id", existing.id);
 
       if (existingUpdateError) {
-        console.error("Existing submission update error:", existingUpdateError);
+        console.error(
+          "Existing submission update error:",
+          existingUpdateError,
+        );
+
         return response({
           error: "تعذر تحديث حالة المشاركة السابقة",
         }, 500);
@@ -168,7 +173,9 @@ Deno.serve(async (req) => {
       .order("position", { ascending: true });
 
     if (stagesError || !stages || stages.length === 0) {
-      return response({ error: "تعذر تحميل مراحل المسابقة" }, 500);
+      return response({
+        error: "تعذر تحميل مراحل المسابقة",
+      }, 500);
     }
 
     const multipleChoiceStages = stages.filter(
@@ -187,7 +194,9 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const stageIds = multipleChoiceStages.map((stage: any) => stage.id);
+    const stageIds = multipleChoiceStages.map(
+      (stage: any) => stage.id,
+    );
 
     const { data: answerKeys, error: keysError } = await supabase
       .from("advocacy_stage_answers")
@@ -195,14 +204,15 @@ Deno.serve(async (req) => {
       .in("stage_id", stageIds);
 
     if (keysError) {
-      return response({ error: "تعذر تحميل مفاتيح الإجابة" }, 500);
+      return response({
+        error: "تعذر تحميل مفاتيح الإجابة",
+      }, 500);
     }
 
     const keyByStage = new Map(
       (answerKeys ?? []).map((key: any) => [key.stage_id, key]),
     );
 
-    // لا نسمح بتشغيل المسابقة إذا كان مفتاح أي سؤال مفقودًا.
     for (const stage of multipleChoiceStages) {
       if (!keyByStage.has(stage.id)) {
         return response({
@@ -216,7 +226,9 @@ Deno.serve(async (req) => {
 
     for (const stage of multipleChoiceStages) {
       const key: any = keyByStage.get(stage.id);
-      const options = Array.isArray(stage.options) ? stage.options : [];
+      const options = Array.isArray(stage.options)
+        ? stage.options
+        : [];
 
       objectiveMaximum += Number(stage.points || 0);
 
@@ -265,6 +277,8 @@ Deno.serve(async (req) => {
       Math.floor((Date.now() - startedAt) / 1000),
     );
 
+    const totalScore = objectiveScore + 10;
+
     const { data: submission, error: insertError } = await supabase
       .from("advocacy_submissions")
       .insert({
@@ -275,7 +289,7 @@ Deno.serve(async (req) => {
         answers,
         final_argument: finalArgument,
         objective_score: objectiveScore,
-        total_score: objectiveScore + 10,
+        total_score: totalScore,
         evaluation_status: "approved",
         submitted_at: new Date().toISOString(),
         started_at: attempt.started_at,
@@ -303,7 +317,10 @@ Deno.serve(async (req) => {
       .eq("status", "started");
 
     if (attemptUpdateError) {
-      console.error("Attempt update error:", attemptUpdateError);
+      console.error(
+        "Attempt update error:",
+        attemptUpdateError,
+      );
     }
 
     return response({
@@ -313,7 +330,7 @@ Deno.serve(async (req) => {
       submission_id: submission.id,
       objective_score: objectiveScore,
       advocacy_score: 10,
-      total_score: objectiveScore + 10,
+      total_score: totalScore,
       evaluation_status: "approved",
     });
 
