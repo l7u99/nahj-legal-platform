@@ -31,17 +31,6 @@ function getServiceKey(): string {
   throw new Error("Supabase service key is missing");
 }
 
-function getDurationSeconds(
-  startedAt: string | null | undefined,
-): number {
-  if (!startedAt) return 0;
-
-  const start = new Date(startedAt).getTime();
-  if (!Number.isFinite(start)) return 0;
-
-  return Math.max(0, Math.floor((Date.now() - start) / 1000));
-}
-
 // تم إيقاف التقييم بالذكاء الاصطناعي مؤقتًا.
 // نحتفظ بدالة evaluate-advocacy مستقلة للمستقبل.
 
@@ -118,9 +107,7 @@ Deno.serve(async (req) => {
 
     const { data: attempt, error: attemptError } = await supabase
       .from("advocacy_attempts")
-      .select(
-        "id,case_id,phone_hash,started_at,status,completed_at,duration_seconds",
-      )
+      .select("id,case_id,phone_hash,started_at,status")
       .eq("id", attemptId)
       .maybeSingle();
 
@@ -141,20 +128,9 @@ Deno.serve(async (req) => {
     }
 
     // معالجة المشاركة المحفوظة سابقًا دون إنشاء مشاركة مكررة.
-    // تحديث حقول المحاولة المطلوبة لقيد قاعدة البيانات.
     if (existing) {
       const objectiveScore = Number(existing.objective_score || 0);
-      const advocacyScore = 10;
-      const totalScore = objectiveScore + advocacyScore;
-
-      const completedAt =
-        attempt.completed_at || new Date().toISOString();
-
-      const durationSeconds =
-        attempt.duration_seconds !== null &&
-        attempt.duration_seconds !== undefined
-          ? Math.max(0, Math.floor(Number(attempt.duration_seconds) || 0))
-          : getDurationSeconds(attempt.started_at);
+      const totalScore = objectiveScore + 10;
 
       const { error: existingUpdateError } = await supabase
         .from("advocacy_submissions")
@@ -165,20 +141,25 @@ Deno.serve(async (req) => {
         .eq("id", existing.id);
 
       if (existingUpdateError) {
-        console.error(
-          "Existing submission update error:",
-          existingUpdateError,
-        );
+        console.error("Existing submission update error:", existingUpdateError);
         return response({
           error: "تعذر تحديث حالة المشاركة السابقة",
         }, 500);
       }
 
+      // تحديث جميع الحقول المطلوبة لقيد حالة المحاولة.
+      const startedAt = new Date(attempt.started_at).getTime();
+
+      const durationSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - startedAt) / 1000),
+      );
+
       const { error: attemptUpdateError } = await supabase
         .from("advocacy_attempts")
         .update({
           status: "submitted",
-          completed_at: completedAt,
+          completed_at: new Date().toISOString(),
           duration_seconds: durationSeconds,
         })
         .eq("id", attemptId);
@@ -197,7 +178,7 @@ Deno.serve(async (req) => {
         status: "submitted",
         evaluation_status: "approved",
         objective_score: objectiveScore,
-        advocacy_score: advocacyScore,
+        advocacy_score: 10,
         total_score: totalScore,
       });
     }
@@ -310,12 +291,16 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const durationSeconds = getDurationSeconds(attempt.started_at);
+    const startedAt = new Date(attempt.started_at).getTime();
+
+    const durationSeconds = Math.max(
+      0,
+      Math.floor((Date.now() - startedAt) / 1000),
+    );
 
     // المرافعة تستحق 10 درجات عند استيفاء شروط التسليم.
     const advocacyScore = 10;
     const totalScore = objectiveScore + advocacyScore;
-    const completedAt = new Date().toISOString();
 
     const { data: submission, error: insertError } = await supabase
       .from("advocacy_submissions")
@@ -329,7 +314,7 @@ Deno.serve(async (req) => {
         objective_score: objectiveScore,
         total_score: totalScore,
         evaluation_status: "approved",
-        submitted_at: completedAt,
+        submitted_at: new Date().toISOString(),
         started_at: attempt.started_at,
         duration_seconds: durationSeconds,
       })
@@ -347,7 +332,7 @@ Deno.serve(async (req) => {
       .from("advocacy_attempts")
       .update({
         status: "submitted",
-        completed_at: completedAt,
+        completed_at: new Date().toISOString(),
         duration_seconds: durationSeconds,
       })
       .eq("id", attempt.id)
@@ -370,6 +355,7 @@ Deno.serve(async (req) => {
       total_score: totalScore,
       evaluation_status: "approved",
     });
+
   } catch (error) {
     console.error("Unexpected error:", error);
 
