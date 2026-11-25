@@ -356,20 +356,96 @@ export default function AdvocacyAdmin() {
           <div className="actions"><button className="btn" type="button" onClick={() => updateCaseStatus('published')}>نشر المسابقة</button><button className="btn secondary" type="button" onClick={() => updateCaseStatus('closed')}>إغلاق المسابقة</button><button className="btn secondary" type="button" onClick={() => updateCaseStatus('draft')}>إعادتها لمسودة</button></div>
         </section>
 
-        <section className="card"><h2>مراحل المسابقة</h2>{stages.map(stage => <article className="review" key={stage.id}><b>المرحلة {stage.stage_number}: {stage.title}</b><p>{stage.prompt}</p><p>النوع: {stage.stage_type === 'multiple_choice' ? 'اختيار من متعدد' : 'مرافعة مكتوبة'} · الدرجة: {stage.points}</p>{stage.options?.length > 0 && <ol>{stage.options.map((option, i) => <li key={i}>{option}</li>)}</ol>}</article>)}
-          <h3>إضافة مرحلة</h3><form onSubmit={addStage}>
-            <label>رقم المرحلة<select value={stageForm.stage_number} onChange={e => setStageForm({ ...stageForm, stage_number: e.target.value })}>{[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-            <label>عنوان المرحلة<input required value={stageForm.title} onChange={e => setStageForm({ ...stageForm, title: e.target.value })} /></label>
-            <label>نص السؤال / المطلوب<textarea required value={stageForm.prompt} onChange={e => setStageForm({ ...stageForm, prompt: e.target.value })} /></label>
-            <label>نوع المرحلة<select value={stageForm.stage_type} onChange={e => setStageForm({ ...stageForm, stage_type: e.target.value, points: e.target.value === 'written_argument' ? '10' : '5' })}><option value="multiple_choice">اختيار من متعدد</option><option value="written_argument">مرافعة مكتوبة</option></select></label>
-            {stageForm.stage_type === 'multiple_choice' && <>
-              {stageForm.options.map((option, i) => <label key={i}>الخيار {i+1}<input value={option} onChange={e => setStageForm({ ...stageForm, options: stageForm.options.map((v, j) => j === i ? e.target.value : v) })} /></label>)}
-              <label>رقم الإجابة الصحيحة<select value={stageForm.correct_option_index} onChange={e => setStageForm({ ...stageForm, correct_option_index: e.target.value })}>{stageForm.options.map((_, i) => <option key={i} value={i}>الخيار {i+1}</option>)}</select></label>
-            </>}
-            {stageForm.stage_type === 'written_argument' && <><label>أقل عدد كلمات<input type="number" min="1" value={stageForm.min_words} onChange={e => setStageForm({ ...stageForm, min_words: e.target.value })} /></label><label>أقصى عدد كلمات<input type="number" min="1" value={stageForm.max_words} onChange={e => setStageForm({ ...stageForm, max_words: e.target.value })} /></label></>}
-            <label>الدرجة<input type="number" min="0" max="10" value={stageForm.points} onChange={e => setStageForm({ ...stageForm, points: e.target.value })} /></label>
-            <button className="btn">حفظ المرحلة</button>
-          </form>
+        <section className="card" dir="rtl" style={{ textAlign: 'right' }}>
+          <h2>مراحل المسابقة</h2>
+          <p className="muted">أضيفي مراحل القضية بالترتيب. لكل مرحلة نوع ودرجة ومحتوى مستقل.</p>
+
+          <div style={{ display: 'grid', gap: 12, marginBottom: 28 }}>
+            {stages.map(stage => (
+              <article className="review" key={stage.id} style={{ padding: 18, borderRadius: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <b>المرحلة {stage.stage_number}: {stage.title}</b>
+                  <span className="badge">{stage.points} درجات</span>
+                </div>
+                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{stage.prompt}</p>
+                <p className="muted">النوع: {stage.stage_type === 'multiple_choice' ? 'اختيار من متعدد' : 'مرافعة مكتوبة'}</p>
+                {stage.options?.length > 0 && <ol style={{ paddingRight: 24, lineHeight: 1.9 }}>{stage.options.map((option, i) => <li key={i}>{option}</li>)}</ol>}
+              </article>
+            ))}
+            {!stages.length && <p className="note">لم تتم إضافة مراحل لهذه المسابقة بعد.</p>}
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,.2)', paddingTop: 22 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 18 }}>إضافة مرحلة جديدة</h3>
+            <form onSubmit={addStage} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 16, maxWidth: 760, margin: '0 auto' }}>
+              <label style={{ display: 'grid', gap: 8, width: '100%', fontWeight: 600 }}>
+                <span>رقم المرحلة</span>
+                <select style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} value={stageForm.stage_number} onChange={e => setStageForm({ ...stageForm, stage_number: e.target.value })}>
+                  {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+
+              <label style={{ display: 'grid', gap: 8, width: '100%', fontWeight: 600 }}>
+                <span>عنوان المرحلة</span>
+                <input style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} required value={stageForm.title} onChange={e => setStageForm({ ...stageForm, title: e.target.value })} placeholder="مثال: تحديد التكييف القانوني" />
+              </label>
+
+              <label style={{ display: 'grid', gap: 8, width: '100%', fontWeight: 600 }}>
+                <span>نص السؤال أو المطلوب</span>
+                <textarea style={{ width: '100%', minHeight: 130, boxSizing: 'border-box', resize: 'vertical' }} required value={stageForm.prompt} onChange={e => setStageForm({ ...stageForm, prompt: e.target.value })} placeholder="اكتبي تفاصيل المطلوب من المتسابق بوضوح..." />
+              </label>
+
+              <label style={{ display: 'grid', gap: 8, width: '100%', fontWeight: 600 }}>
+                <span>نوع المرحلة</span>
+                <select style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} value={stageForm.stage_type} onChange={e => setStageForm({ ...stageForm, stage_type: e.target.value, points: e.target.value === 'written_argument' ? '10' : '5' })}>
+                  <option value="multiple_choice">اختيار من متعدد</option>
+                  <option value="written_argument">مرافعة مكتوبة</option>
+                </select>
+              </label>
+
+              {stageForm.stage_type === 'multiple_choice' && (
+                <div style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 16, display: 'grid', gap: 14 }}>
+                  <h4 style={{ margin: 0 }}>خيارات الإجابة</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+                    {stageForm.options.map((option, i) => (
+                      <label key={i} style={{ display: 'grid', gap: 7, minWidth: 0, fontWeight: 600 }}>
+                        <span>الخيار {i + 1}</span>
+                        <input style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }} value={option} onChange={e => setStageForm({ ...stageForm, options: stageForm.options.map((v, j) => j === i ? e.target.value : v) })} placeholder={`اكتبي نص الخيار ${i + 1}`} />
+                      </label>
+                    ))}
+                  </div>
+                  <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>
+                    <span>الإجابة الصحيحة</span>
+                    <select style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} value={stageForm.correct_option_index} onChange={e => setStageForm({ ...stageForm, correct_option_index: e.target.value })}>
+                      {stageForm.options.map((_, i) => <option key={i} value={i}>الخيار {i + 1}</option>)}
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              {stageForm.stage_type === 'written_argument' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12 }}>
+                  <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>
+                    <span>أقل عدد كلمات</span>
+                    <input style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} type="number" min="1" value={stageForm.min_words} onChange={e => setStageForm({ ...stageForm, min_words: e.target.value })} />
+                  </label>
+                  <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>
+                    <span>أقصى عدد كلمات</span>
+                    <input style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} type="number" min="1" value={stageForm.max_words} onChange={e => setStageForm({ ...stageForm, max_words: e.target.value })} />
+                  </label>
+                </div>
+              )}
+
+              <label style={{ display: 'grid', gap: 8, width: '100%', maxWidth: 260, fontWeight: 600 }}>
+                <span>درجة المرحلة</span>
+                <input style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} type="number" min="0" max="10" value={stageForm.points} onChange={e => setStageForm({ ...stageForm, points: e.target.value })} />
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
+                <button className="btn" type="submit" style={{ minWidth: 180 }}>حفظ المرحلة</button>
+              </div>
+            </form>
+          </div>
         </section>
 
         <section className="card">
