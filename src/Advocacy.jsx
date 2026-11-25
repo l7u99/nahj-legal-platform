@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db, ready } from './lib'
@@ -167,8 +166,22 @@ export default function Advocacy() {
       return
     }
 
-    if (finalArgument.trim().length < 20) {
-      setError('يرجى كتابة المرافعة الختامية بما لا يقل عن 20 حرفًا.')
+    const finalText = finalArgument.trim()
+    const wordCount = finalText.split(/\s+/).filter(Boolean).length
+    const hasLetter = /\p{L}/u.test(finalText)
+
+    if (finalText.length < 200) {
+      setError('يجب أن تحتوي المرافعة على 200 حرف على الأقل.')
+      return
+    }
+
+    if (wordCount > 5000) {
+      setError('الحد الأعلى للمرافعة هو 5,000 كلمة.')
+      return
+    }
+
+    if (!hasLetter) {
+      setError('يرجى كتابة مرافعة نصية تحتوي على أحرف.')
       return
     }
 
@@ -182,7 +195,7 @@ export default function Advocacy() {
             attempt_id: attemptId,
             full_name: name.trim(),
             answers,
-            final_argument: finalArgument.trim(),
+            final_argument: finalText,
           },
         }
       )
@@ -414,10 +427,10 @@ export default function Advocacy() {
               <button
                 className="btn"
                 type="button"
-                disabled={sending || !allStagesAnswered || finalArgument.trim().length < 20}
+                disabled={sending || !allStagesAnswered || finalArgument.trim().length < 200 || finalArgument.trim().split(/\s+/).filter(Boolean).length > 5000 || !/\p{L}/u.test(finalArgument)}
                 onClick={submitParticipation}
               >
-                {sending ? 'جارٍ حفظ المشاركة وتقييمها...' : 'اعتماد وتسليم المرافعة'}
+                {sending ? 'جارٍ حفظ المشاركة...' : 'اعتماد وتسليم المرافعة'}
               </button>
             </div>
           </section>
@@ -428,26 +441,21 @@ export default function Advocacy() {
             <small className="gold">تم استلام المشاركة</small>
             <h2>شكرًا لمشاركتك في نهج القانوني</h2>
             <p>
-              تم حفظ إجاباتك وإرسالها إلى نظام التقييم.
+              تم حفظ إجاباتك ومرافعتك بنجاح.
             </p>
 
             <div className="note">
-              <strong>حالة التقييم:</strong>
+              <strong>حالة المشاركة:</strong>
+              <p>تم استلام المرافعة بنجاح (submitted).</p>
               <p>
-                {result.evaluation_status === 'completed'
-                  ? 'اكتمل التقييم.'
-                  : 'المشاركة محفوظة، والتقييم قيد المعالجة.'}
+                <strong>درجتك النهائية:</strong> {result.total_score ?? '—'} / 25
               </p>
-
-              {result.total_score !== null && result.total_score !== undefined && (
-                <p>
-                  <strong>النتيجة:</strong> {result.total_score}
-                </p>
-              )}
-
-              {result.feedback?.summary && (
-                <p>{result.feedback.summary}</p>
-              )}
+              <p>
+                <strong>درجة المراحل الموضوعية:</strong> {result.objective_score ?? 0} / 15
+              </p>
+              <p>
+                <strong>درجة المرافعة:</strong> 10 / 10
+              </p>
             </div>
 
             <p>رقم المشاركة: {result.submission_id}</p>
