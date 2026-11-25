@@ -377,7 +377,83 @@ export default function AdvocacyAdmin() {
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,.2)', paddingTop: 22 }}>
             <h3 style={{ marginTop: 0, marginBottom: 18 }}>إضافة مرحلة جديدة</h3>
-            <form onSubmit={addStage} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 16, maxWidth: 760, margin: '0 auto' }}>
+            <style>{`
+              .adv-stage-form,
+              .adv-stage-form * {
+                box-sizing: border-box !important;
+              }
+              .adv-stage-form {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 18px !important;
+                width: 100% !important;
+                max-width: 760px !important;
+                margin: 0 auto !important;
+                direction: rtl !important;
+              }
+              .adv-stage-form label {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                justify-content: flex-start !important;
+                gap: 8px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                margin: 0 !important;
+                text-align: right !important;
+                white-space: normal !important;
+              }
+              .adv-stage-form label > span {
+                display: block !important;
+                width: 100% !important;
+                line-height: 1.6 !important;
+              }
+              .adv-stage-form input,
+              .adv-stage-form select,
+              .adv-stage-form textarea {
+                display: block !important;
+                float: none !important;
+                position: static !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+              }
+              .adv-stage-form input,
+              .adv-stage-form select {
+                min-height: 48px !important;
+              }
+              .adv-stage-form textarea {
+                min-height: 130px !important;
+                resize: vertical !important;
+              }
+              .adv-stage-form .adv-stage-options {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 14px !important;
+                width: 100% !important;
+              }
+              .adv-stage-form .adv-stage-options-grid {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 12px !important;
+                width: 100% !important;
+              }
+              .adv-stage-form .adv-stage-submit-row {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) auto !important;
+                gap: 12px !important;
+                align-items: end !important;
+              }
+              @media (min-width: 640px) {
+                .adv-stage-form .adv-stage-options-grid {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                }
+              }
+            `}</style>
+            <form className="adv-stage-form" onSubmit={addStage}>
               <label style={{ display: 'grid', gap: 8, width: '100%', fontWeight: 600 }}>
                 <span>رقم المرحلة</span>
                 <select style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} value={stageForm.stage_number} onChange={e => setStageForm({ ...stageForm, stage_number: e.target.value })}>
@@ -404,9 +480,9 @@ export default function AdvocacyAdmin() {
               </label>
 
               {stageForm.stage_type === 'multiple_choice' && (
-                <div style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 16, display: 'grid', gap: 14 }}>
+                <div className="adv-stage-options" style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 14, padding: 16 }}>
                   <h4 style={{ margin: 0 }}>خيارات الإجابة</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+                  <div className="adv-stage-options-grid">
                     {stageForm.options.map((option, i) => (
                       <label key={i} style={{ display: 'grid', gap: 7, minWidth: 0, fontWeight: 600 }}>
                         <span>الخيار {i + 1}</span>
@@ -424,7 +500,7 @@ export default function AdvocacyAdmin() {
               )}
 
               {stageForm.stage_type === 'written_argument' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12 }}>
+                <div className="adv-stage-options-grid">
                   <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>
                     <span>أقل عدد كلمات</span>
                     <input style={{ width: '100%', minHeight: 46, boxSizing: 'border-box' }} type="number" min="1" value={stageForm.min_words} onChange={e => setStageForm({ ...stageForm, min_words: e.target.value })} />
