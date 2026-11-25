@@ -4,8 +4,184 @@ import { db, ready } from './lib'
 
 const emptyStage = { stage_number: '1', title: '', prompt: '', stage_type: 'multiple_choice', options: ['', '', '', ''], points: '5', min_words: '3', max_words: '5', correct_option_index: '0' }
 
+const emptyCaseDetails = {
+  parties: [],
+  claims: [],
+  defenses: [],
+  legal_references: []
+}
+
 function dateLabel(value) {
   return value ? new Date(value).toLocaleString('ar-SA') : '—'
+}
+
+function CaseDetailsEditor({ caseId }) {
+  const [details, setDetails] = useState(emptyCaseDetails)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    loadDetails()
+  }, [caseId])
+
+  async function loadDetails() {
+    setLoading(true)
+    setMessage('')
+
+    const { data, error } = await db
+      .from('advocacy_case_details')
+      .select('*')
+      .eq('case_id', caseId)
+      .maybeSingle()
+
+    if (error) {
+      setMessage('تعذر تحميل التفاصيل: ' + error.message)
+    } else if (data) {
+      setDetails({
+        parties: Array.isArray(data.parties) ? data.parties : [],
+        claims: Array.isArray(data.claims) ? data.claims : [],
+        defenses: Array.isArray(data.defenses) ? data.defenses : [],
+        legal_references: Array.isArray(data.legal_references) ? data.legal_references : []
+      })
+    } else {
+      setDetails(emptyCaseDetails)
+    }
+
+    setLoading(false)
+  }
+
+  function updateList(field, index, key, value) {
+    setDetails(current => ({
+      ...current,
+      [field]: current[field].map((item, i) =>
+        i === index ? { ...item, [key]: value } : item
+      )
+    }))
+  }
+
+  function addItem(field, item) {
+    setDetails(current => ({
+      ...current,
+      [field]: [...current[field], item]
+    }))
+  }
+
+  function removeItem(field, index) {
+    setDetails(current => ({
+      ...current,
+      [field]: current[field].filter((_, i) => i !== index)
+    }))
+  }
+
+  async function saveDetails() {
+    setSaving(true)
+    setMessage('')
+
+    const { error } = await db
+      .from('advocacy_case_details')
+      .upsert({
+        case_id: caseId,
+        ...details,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'case_id' })
+
+    if (error) {
+      setMessage('تعذر حفظ التفاصيل: ' + error.message)
+    } else {
+      setMessage('تم حفظ تفاصيل القضية بنجاح.')
+    }
+
+    setSaving(false)
+  }
+
+  if (loading) return <section className="card"><p>جارٍ تحميل تفاصيل القضية...</p></section>
+
+  return (
+    <section className="card form">
+      <h2>تفاصيل القضية وأطرافها</h2>
+      <p className="muted">تُحفظ هذه البيانات مع القضية المحددة، ويمكن تعديلها في أي وقت.</p>
+
+      <h3>أطراف القضية</h3>
+      {details.parties.map((item, i) => (
+        <div className="review" key={i}>
+          <label>اسم الطرف
+            <input value={item.name || ''}
+              onChange={e => updateList('parties', i, 'name', e.target.value)} />
+          </label>
+          <label>صفته في القضية
+            <input value={item.role || ''}
+              onChange={e => updateList('parties', i, 'role', e.target.value)} />
+          </label>
+          <button type="button" className="mini"
+            onClick={() => removeItem('parties', i)}>حذف الطرف</button>
+        </div>
+      ))}
+      <button type="button" className="btn secondary"
+        onClick={() => addItem('parties', { name: '', role: '' })}>
+        إضافة طرف
+      </button>
+
+      <h3>طلبات المدعي</h3>
+      {details.claims.map((item, i) => (
+        <div className="review" key={i}>
+          <textarea value={item.text || ''}
+            onChange={e => updateList('claims', i, 'text', e.target.value)}
+            placeholder="اكتبي الطلب..." />
+          <button type="button" className="mini"
+            onClick={() => removeItem('claims', i)}>حذف الطلب</button>
+        </div>
+      ))}
+      <button type="button" className="btn secondary"
+        onClick={() => addItem('claims', { text: '' })}>
+        إضافة طلب
+      </button>
+
+      <h3>دفوع الطرف الآخر</h3>
+      {details.defenses.map((item, i) => (
+        <div className="review" key={i}>
+          <textarea value={item.text || ''}
+            onChange={e => updateList('defenses', i, 'text', e.target.value)}
+            placeholder="اكتبي الدفع..." />
+          <button type="button" className="mini"
+            onClick={() => removeItem('defenses', i)}>حذف الدفع</button>
+        </div>
+      ))}
+      <button type="button" className="btn secondary"
+        onClick={() => addItem('defenses', { text: '' })}>
+        إضافة دفع
+      </button>
+
+      <h3>الأنظمة والمواد القانونية والمراجع</h3>
+      {details.legal_references.map((item, i) => (
+        <div className="review" key={i}>
+          <label>اسم النظام أو المرجع
+            <input value={item.name || ''}
+              onChange={e => updateList('legal_references', i, 'name', e.target.value)} />
+          </label>
+          <label>رقم المادة أو موضع الاستدلال
+            <input value={item.article || ''}
+              onChange={e => updateList('legal_references', i, 'article', e.target.value)} />
+          </label>
+          <label>نص الاستدلال أو الرابط
+            <textarea value={item.note || ''}
+              onChange={e => updateList('legal_references', i, 'note', e.target.value)} />
+          </label>
+          <button type="button" className="mini"
+            onClick={() => removeItem('legal_references', i)}>حذف المرجع</button>
+        </div>
+      ))}
+      <button type="button" className="btn secondary"
+        onClick={() => addItem('legal_references', { name: '', article: '', note: '' })}>
+        إضافة مرجع قانوني
+      </button>
+
+      <button type="button" className="btn" onClick={saveDetails} disabled={saving}>
+        {saving ? 'جارٍ الحفظ...' : 'حفظ تفاصيل القضية'}
+      </button>
+      {message && <p className="note">{message}</p>}
+    </section>
+  )
 }
 
 export default function AdvocacyAdmin() {
@@ -113,6 +289,7 @@ export default function AdvocacyAdmin() {
     <main className="narrow">
       <section className="hero"><small>NAHJ LEGAL · ADMIN</small><h1>إدارة المرافعة القانونية</h1><p>إدارة مستقلة عن مسابقة الأسئلة الأسبوعية.</p></section>
       {error && <div className="note">{error}</div>}{notice && <div className="note">{notice}</div>}
+
       <section className="card form"><h2>إنشاء مسابقة / قضية جديدة</h2>
         <form onSubmit={createCase}>
           <label>عنوان المسابقة<input required value={caseForm.title} onChange={e => setCaseForm({ ...caseForm, title: e.target.value })} /></label>
@@ -121,9 +298,11 @@ export default function AdvocacyAdmin() {
           <button className="btn">إنشاء كمسودة</button>
         </form>
       </section>
+
       <section className="card"><div className="actions" style={{justifyContent:'space-between'}}><h2>المسابقات</h2><button className="mini" type="button" onClick={loadCases}>تحديث</button></div>
         {loading ? <p>جارٍ التحميل…</p> : cases.length ? cases.map(item => <div key={item.id} className="review"><b>{item.title}</b><p>الحالة: {item.status} · أُنشئت: {dateLabel(item.created_at)}</p><button type="button" className="btn secondary" onClick={() => openCase(item)}>إدارة هذه المسابقة</button></div>) : <p>لا توجد مسابقات مرافعة بعد.</p>}
       </section>
+
       <section className="card">
         <h2>إحصائيات المرافعة</h2>
         <div className="cols">
@@ -169,10 +348,14 @@ export default function AdvocacyAdmin() {
           </details>
         </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
       </section>
+
       {activeCase && <>
+        <CaseDetailsEditor caseId={activeCase.id} />
+
         <section className="card"><h2>{activeCase.title}</h2><p>{activeCase.description}</p><div className="note">{activeCase.case_facts}</div><p>الحالة الحالية: <b>{activeCase.status}</b></p>
           <div className="actions"><button className="btn" type="button" onClick={() => updateCaseStatus('published')}>نشر المسابقة</button><button className="btn secondary" type="button" onClick={() => updateCaseStatus('closed')}>إغلاق المسابقة</button><button className="btn secondary" type="button" onClick={() => updateCaseStatus('draft')}>إعادتها لمسودة</button></div>
         </section>
+
         <section className="card"><h2>مراحل المسابقة</h2>{stages.map(stage => <article className="review" key={stage.id}><b>المرحلة {stage.stage_number}: {stage.title}</b><p>{stage.prompt}</p><p>النوع: {stage.stage_type === 'multiple_choice' ? 'اختيار من متعدد' : 'مرافعة مكتوبة'} · الدرجة: {stage.points}</p>{stage.options?.length > 0 && <ol>{stage.options.map((option, i) => <li key={i}>{option}</li>)}</ol>}</article>)}
           <h3>إضافة مرحلة</h3><form onSubmit={addStage}>
             <label>رقم المرحلة<select value={stageForm.stage_number} onChange={e => setStageForm({ ...stageForm, stage_number: e.target.value })}>{[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
@@ -188,6 +371,7 @@ export default function AdvocacyAdmin() {
             <button className="btn">حفظ المرحلة</button>
           </form>
         </section>
+
         <section className="card">
           <h2>إحصائيات المرافعة</h2>
           <div className="cols">
@@ -238,6 +422,7 @@ export default function AdvocacyAdmin() {
         </section>
       </>}
       <Link className="btn secondary" to="/admin">العودة إلى لوحة الإدارة</Link>
-    </main><footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
+    </main>
+    <footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
   </div>
 }
