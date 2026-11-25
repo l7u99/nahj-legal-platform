@@ -1,30 +1,233 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
-const stages = [
-  { number: '01', title: 'المرحلة الأولى: التكييف القانوني', description: 'سيُضاف محتوى هذه المرحلة لاحقًا.' },
-  { number: '02', title: 'المرحلة الثانية: اكتشاف الخلل', description: 'سيُضاف محتوى هذه المرحلة لاحقًا.' },
-  { number: '03', title: 'المرحلة الثالثة: اتخاذ القرار', description: 'سيُضاف محتوى هذه المرحلة لاحقًا.' },
-  { number: '04', title: 'المرحلة الرابعة: المرافعة الختامية', description: 'سيُتاح هنا حقل كتابة المرافعة بعد اعتماد محتوى المسابقة.' },
-]
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { db, ready } from './lib'
 
 export default function Advocacy() {
+  const [competition, setCompetition] = useState(null)
+  const [stages, setStages] = useState([])
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [attemptId, setAttemptId] = useState('')
+  const [answers, setAnswers] = useState({})
+  const [finalArgument, setFinalArgument] = useState('')
   const [step, setStep] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState(null)
 
-  const validName = name.trim().split(/\s+/).length >= 3
+  useEffect(() => {
+    async function loadCompetition() {
+      if (!ready || !db) {
+        setError('تعذر الاتصال بقاعدة البيانات.')
+        setLoading(false)
+        return
+      }
+
+      const { data: cases, error: caseError } = await db
+        .from('advocacy_cases')
+        .select('id,title,description,case_facts,opens_at,closes_at')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (caseError) {
+        setError('تعذر تحميل المسابقة: ' + caseError.message)
+        setLoading(false)
+        return
+      }
+
+      if (!cases?.length) {
+        setError('لا توجد مسابقة منشورة حاليًا.')
+        setLoading(false)
+        return
+      }
+
+      const currentCase = cases[0]
+      const now = Date.now()
+
+      if (currentCase.opens_at && now < new Date(currentCase.opens_at).getTime()) {
+        setError('لم يبدأ وقت المسابقة بعد.')
+        setLoading(false)
+        return
+      }
+
+      if (currentCase.closes_at && now > new Date(currentCase.closes_at).getTime()) {
+        setError('انتهى وقت المسابقة.')
+        setLoading(false)
+        return
+      }
+
+      const { data: stageRows, error: stageError } = await db
+        .from('advocacy_stages')
+        .select('id,stage_number,title,prompt,stage_type,options,points,min_words,max_words,position')
+        .eq('case_id', currentCase.id)
+        .order('position', { ascending: true })
+
+      if (stageError) {
+        setError('تعذر تحميل مراحل المسابقة: ' + stageError.message)
+        setLoading(false)
+        return
+      }
+
+      if (!stageRows?.length) {
+        setError('لم تتم إضافة مراحل المسابقة بعد.')
+        setLoading(false)
+        return
+      }
+
+      setCompetition(currentCase)
+      setStages(stageRows)
+      setLoading(false)
+    }
+
+    loadCompetition()
+  }, [])
+
+  const validName = name.trim().split(/\s+/).filter(Boolean).length >= 3
   const validPhone = /^05\d{8}$/.test(phone)
-  const canContinue = validName && validPhone
+
+  const currentStage = stages[step - 1]
+
+  const isWrittenStage = (stage) =>
+    stage && !['multiple_choice', 'choice'].includes(stage.stage_type)
+
+  const writtenStages = useMemo(
+    () => stages.filter(isWrittenStage),
+    [stages]
+  )
+
+  const allStagesAnswered = stages.every((stage) => {
+    const answer = answers[stage.id]
+
+    if (isWrittenStage(stage)) {
+      return typeof answer === 'string' && answer.trim().length >= 3
+    }
+
+    return answer !== undefined && answer !== null
+  })
+
+  async function startAttempt() {
+    setError('')
+    setSending(true)
+
+    try {
+      const { data, error: invokeError } = await db.functions.invoke(
+        'start-advocacy-attempt',
+        {
+          body: {
+            case_id: competition.id,
+            p_phone: phone,
+          },
+        }
+      )
+
+      if (invokeError) throw invokeError
+      if (!data?.attempt_id) {
+        throw new Error(data?.error || 'تعذر بدء المحاولة.')
+      }
+
+      setAttemptId(data.attempt_id)
+      setStep(1)
+    } catch (err) {
+      setError(err.message || 'حدث خطأ أثناء بدء المحاولة.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  function updateAnswer(stageId, value) {
+    setAnswers((previous) => ({
+      ...previous,
+      [stageId]: value,
+    }))
+  }
+
+  function getOptions(stage) {
+    if (Array.isArray(stage.options)) return stage.options
+
+    if (typeof stage.options === 'string') {
+      try {
+        const parsed = JSON.parse(stage.options)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+
+    return []
+  }
+
+  async function submitParticipation() {
+    setError('')
+
+    if (!allStagesAnswered) {
+      setError('يرجى الإجابة عن جميع المراحل قبل التسليم.')
+      return
+    }
+
+    if (finalArgument.trim().length < 20) {
+      setError('يرجى كتابة المرافعة الختامية بما لا يقل عن 20 حرفًا.')
+      return
+    }
+
+    setSending(true)
+
+    try {
+      const { data, error: invokeError } = await db.functions.invoke(
+        'submit-advocacy',
+        {
+          body: {
+            attempt_id: attemptId,
+            full_name: name.trim(),
+            answers,
+            final_argument: finalArgument.trim(),
+          },
+        }
+      )
+
+      if (invokeError) throw invokeError
+      if (!data?.success) {
+        throw new Error(data?.error || 'تعذر تسليم المشاركة.')
+      }
+
+      setResult(data)
+      setStep(stages.length + 2)
+    } catch (err) {
+      setError(err.message || 'حدث خطأ أثناء تسليم المشاركة.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="site">
+        <main className="narrow">
+          <section className="card">
+            <p>جارٍ تحميل المسابقة...</p>
+          </section>
+        </main>
+      </div>
+    )
+  }
 
   return (
-    <div className="site">
+    <div className="site" dir="rtl">
       <header>
         <Link to="/" className="brand">
-          <img src={`${import.meta.env.BASE_URL}nahj-logo.png`} alt="شعار نهج القانوني"
-            style={{ width: 76, height: 76, objectFit: 'contain', borderRadius: 12 }} />
-          <span>نهج القانوني<small>المعرفة القانونية تبدأ بسؤال</small></span>
+          <img
+            src={`${import.meta.env.BASE_URL}nahj-logo.png`}
+            alt="شعار نهج القانوني"
+            style={{ width: 76, height: 76, objectFit: 'contain', borderRadius: 12 }}
+          />
+          <span>
+            نهج القانوني
+            <small>المعرفة القانونية تبدأ بسؤال</small>
+          </span>
         </Link>
+
         <nav>
           <Link to="/">الرئيسية</Link>
           <Link to="/archive">أرشيف الأسئلة</Link>
@@ -39,54 +242,227 @@ export default function Advocacy() {
           <p>حلّل الوقائع، مرّ بالمراحل، ثم قدّم حجتك القانونية.</p>
         </section>
 
-        <div className="progress" aria-label="تقدم المسابقة">
-          {step === 0 ? 'الصفحة الأولى من ٥ · بيانات المتسابق' : `المرحلة ${String(step).padStart(2, '0')} من ٤`}
-        </div>
+        {error && (
+          <div className="note" role="alert" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
 
-        {step === 0 ? (
+        {step === 0 && competition && (
           <section className="card form">
-            <small className="gold">الصفحة الأولى</small>
-            <h2>بيانات المتسابق</h2>
-            <p>أدخل بياناتك للانتقال إلى مراحل المسابقة.</p>
-            <label>الاسم الثلاثي
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك الثلاثي" />
+            <small className="gold">بيانات المتسابق</small>
+            <h2>{competition.title}</h2>
+            <p>{competition.description}</p>
+
+            <label>
+              الاسم الثلاثي
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="اكتب اسمك الثلاثي"
+              />
             </label>
-            <label>رقم الجوال السعودي
-              <input value={phone} maxLength="10" inputMode="numeric"
-                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="05XXXXXXXX" />
+
+            <label>
+              رقم الجوال السعودي
+              <input
+                value={phone}
+                maxLength="10"
+                inputMode="numeric"
+                onChange={(e) =>
+                  setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                }
+                placeholder="05XXXXXXXX"
+              />
             </label>
-            <div className="note">لن تنتقل للمرحلة التالية إلا بعد إدخال الاسم الثلاثي ورقم جوال صحيح.</div>
-            <button className="btn" type="button" disabled={!canContinue} onClick={() => setStep(1)}>
-              الانتقال إلى المرحلة الأولى ←
+
+            <div className="note">
+              تأكد من صحة بياناتك قبل بدء المحاولة.
+            </div>
+
+            <button
+              className="btn"
+              type="button"
+              disabled={!validName || !validPhone || sending}
+              onClick={startAttempt}
+            >
+              {sending ? 'جارٍ بدء المحاولة...' : 'بدء المسابقة ←'}
             </button>
           </section>
-        ) : (
+        )}
+
+        {step > 0 && step <= stages.length && currentStage && (
           <section className="card">
-            <small className="gold">المرحلة {stages[step - 1].number} من ٤</small>
-            <h2>{stages[step - 1].title}</h2>
-            <p>{stages[step - 1].description}</p>
-            <div className="note">
-              هذه المرحلة لم يُضف محتواها بعد. لن تظهر أي قضية أو أسئلة افتراضية؛ ستُضاف بعد اعتمادك للمحتوى.
+            <div className="progress">
+              المرحلة {step} من {stages.length}
             </div>
+
+            <small className="gold">
+              المرحلة {String(step).padStart(2, '0')}
+            </small>
+
+            <h2>{currentStage.title}</h2>
+
+            {competition.case_facts && (
+              <div className="note" style={{ whiteSpace: 'pre-wrap' }}>
+                <strong>وقائع القضية</strong>
+                <p>{competition.case_facts}</p>
+              </div>
+            )}
+
+            <p style={{ whiteSpace: 'pre-wrap' }}>
+              {currentStage.prompt}
+            </p>
+
+            {isWrittenStage(currentStage) ? (
+              <label>
+                إجابتك القانونية
+                <textarea
+                  rows={7}
+                  value={answers[currentStage.id] || ''}
+                  onChange={(e) =>
+                    updateAnswer(currentStage.id, e.target.value)
+                  }
+                  placeholder="اكتب تحليلك القانوني..."
+                />
+              </label>
+            ) : (
+              <div className="form">
+                {getOptions(currentStage).map((option, index) => (
+                  <label
+                    key={index}
+                    className="note"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`stage-${currentStage.id}`}
+                      checked={answers[currentStage.id] === index}
+                      onChange={() => updateAnswer(currentStage.id, index)}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
             <div className="actions">
               {step > 1 && (
-                <button className="btn secondary" type="button" onClick={() => setStep(step - 1)}>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={() => setStep(step - 1)}
+                >
                   → المرحلة السابقة
                 </button>
               )}
-              {step < 4 ? (
-                <button className="btn" type="button" onClick={() => setStep(step + 1)}>
-                  الانتقال إلى المرحلة التالية ←
-                </button>
-              ) : (
-                <p>وصلت إلى نهاية عرض المراحل. ستُفعّل المشاركة بعد إضافة محتوى المسابقة وربط الحفظ.</p>
-              )}
+
+              <button
+                className="btn"
+                type="button"
+                disabled={
+                  isWrittenStage(currentStage)
+                    ? (answers[currentStage.id] || '').trim().length < 3
+                    : answers[currentStage.id] === undefined
+                }
+                onClick={() => setStep(step + 1)}
+              >
+                {step < stages.length
+                  ? 'المرحلة التالية ←'
+                  : 'الانتقال إلى المرافعة الختامية ←'}
+              </button>
             </div>
           </section>
         )}
 
-        <Link className="btn secondary" to="/">العودة للرئيسية</Link>
+        {step === stages.length + 1 && (
+          <section className="card form">
+            <small className="gold">المرافعة الختامية</small>
+            <h2>قدّم مرافعتك القانونية</h2>
+            <p>
+              اجمع دفوعك وتحليلك وطلباتك في مرافعة واضحة ومترابطة.
+            </p>
+
+            <label>
+              نص المرافعة
+              <textarea
+                rows={12}
+                value={finalArgument}
+                onChange={(e) => setFinalArgument(e.target.value)}
+                placeholder="بسم الله، وبعد... اكتب مرافعتك القانونية هنا."
+              />
+            </label>
+
+            <div className="note">
+              تأكد من مراجعة إجاباتك ومرافعتك قبل اعتماد المشاركة.
+            </div>
+
+            <div className="actions">
+              <button
+                className="btn secondary"
+                type="button"
+                onClick={() => setStep(stages.length)}
+              >
+                → العودة للمرحلة السابقة
+              </button>
+
+              <button
+                className="btn"
+                type="button"
+                disabled={sending || !allStagesAnswered || finalArgument.trim().length < 20}
+                onClick={submitParticipation}
+              >
+                {sending ? 'جارٍ حفظ المشاركة وتقييمها...' : 'اعتماد وتسليم المرافعة'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {result && step === stages.length + 2 && (
+          <section className="card">
+            <small className="gold">تم استلام المشاركة</small>
+            <h2>شكرًا لمشاركتك في نهج القانوني</h2>
+            <p>
+              تم حفظ إجاباتك وإرسالها إلى نظام التقييم.
+            </p>
+
+            <div className="note">
+              <strong>حالة التقييم:</strong>
+              <p>
+                {result.evaluation_status === 'completed'
+                  ? 'اكتمل التقييم.'
+                  : 'المشاركة محفوظة، والتقييم قيد المعالجة.'}
+              </p>
+
+              {result.total_score !== null && result.total_score !== undefined && (
+                <p>
+                  <strong>النتيجة:</strong> {result.total_score}
+                </p>
+              )}
+
+              {result.feedback?.summary && (
+                <p>{result.feedback.summary}</p>
+              )}
+            </div>
+
+            <p>رقم المشاركة: {result.submission_id}</p>
+
+            <Link className="btn secondary" to="/">
+              العودة للرئيسية
+            </Link>
+          </section>
+        )}
+
+        <Link className="btn secondary" to="/">
+          العودة للرئيسية
+        </Link>
       </main>
+
       <footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
     </div>
   )
