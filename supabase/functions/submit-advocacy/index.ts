@@ -31,8 +31,19 @@ function getServiceKey(): string {
   throw new Error("Supabase service key is missing");
 }
 
+function getDurationSeconds(
+  startedAt: string | null | undefined,
+): number {
+  if (!startedAt) return 0;
+
+  const start = new Date(startedAt).getTime();
+  if (!Number.isFinite(start)) return 0;
+
+  return Math.max(0, Math.floor((Date.now() - start) / 1000));
+}
+
 // تم إيقاف التقييم بالذكاء الاصطناعي مؤقتًا.
-// نحتفظ بوظيفة evaluate-advocacy للمستقبل.
+// نحتفظ بدالة evaluate-advocacy مستقلة للمستقبل.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -107,7 +118,9 @@ Deno.serve(async (req) => {
 
     const { data: attempt, error: attemptError } = await supabase
       .from("advocacy_attempts")
-      .select("id,case_id,phone_hash,started_at,status")
+      .select(
+        "id,case_id,phone_hash,started_at,status,completed_at,duration_seconds",
+      )
       .eq("id", attemptId)
       .maybeSingle();
 
@@ -127,9 +140,21 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
+    // معالجة المشاركة المحفوظة سابقًا دون إنشاء مشاركة مكررة.
+    // تحديث حقول المحاولة المطلوبة لقيد قاعدة البيانات.
     if (existing) {
       const objectiveScore = Number(existing.objective_score || 0);
-      const totalScore = objectiveScore + 10;
+      const advocacyScore = 10;
+      const totalScore = objectiveScore + advocacyScore;
+
+      const completedAt =
+        attempt.completed_at || new Date().toISOString();
+
+      const durationSeconds =
+        attempt.duration_seconds !== null &&
+        attempt.duration_seconds !== undefined
+          ? Math.max(0, Math.floor(Number(attempt.duration_seconds) || 0))
+          : getDurationSeconds(attempt.started_at);
 
       const { error: existingUpdateError } = await supabase
         .from("advocacy_submissions")
@@ -144,9 +169,24 @@ Deno.serve(async (req) => {
           "Existing submission update error:",
           existingUpdateError,
         );
-
         return response({
           error: "تعذر تحديث حالة المشاركة السابقة",
+        }, 500);
+      }
+
+      const { error: attemptUpdateError } = await supabase
+        .from("advocacy_attempts")
+        .update({
+          status: "submitted",
+          completed_at: completedAt,
+          duration_seconds: durationSeconds,
+        })
+        .eq("id", attemptId);
+
+      if (attemptUpdateError) {
+        console.error("Attempt update error:", attemptUpdateError);
+        return response({
+          error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
         }, 500);
       }
 
@@ -157,7 +197,7 @@ Deno.serve(async (req) => {
         status: "submitted",
         evaluation_status: "approved",
         objective_score: objectiveScore,
-        advocacy_score: 10,
+        advocacy_score: advocacyScore,
         total_score: totalScore,
       });
     }
@@ -270,14 +310,12 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const startedAt = new Date(attempt.started_at).getTime();
+    const durationSeconds = getDurationSeconds(attempt.started_at);
 
-    const durationSeconds = Math.max(
-      0,
-      Math.floor((Date.now() - startedAt) / 1000),
-    );
-
-    const totalScore = objectiveScore + 10;
+    // المرافعة تستحق 10 درجات عند استيفاء شروط التسليم.
+    const advocacyScore = 10;
+    const totalScore = objectiveScore + advocacyScore;
+    const completedAt = new Date().toISOString();
 
     const { data: submission, error: insertError } = await supabase
       .from("advocacy_submissions")
@@ -291,7 +329,7 @@ Deno.serve(async (req) => {
         objective_score: objectiveScore,
         total_score: totalScore,
         evaluation_status: "approved",
-        submitted_at: new Date().toISOString(),
+        submitted_at: completedAt,
         started_at: attempt.started_at,
         duration_seconds: durationSeconds,
       })
@@ -300,7 +338,6 @@ Deno.serve(async (req) => {
 
     if (insertError || !submission) {
       console.error("Submission insert error:", insertError);
-
       return response({
         error: "تعذر حفظ المشاركة",
       }, 500);
@@ -310,30 +347,29 @@ Deno.serve(async (req) => {
       .from("advocacy_attempts")
       .update({
         status: "submitted",
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
         duration_seconds: durationSeconds,
       })
       .eq("id", attempt.id)
       .eq("status", "started");
 
     if (attemptUpdateError) {
-      console.error(
-        "Attempt update error:",
-        attemptUpdateError,
-      );
+      console.error("Attempt update error:", attemptUpdateError);
+      return response({
+        error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
+      }, 500);
     }
 
     return response({
       success: true,
-      message: "تم استلام مشاركتك وحفظها",
+      message: "تم استلام مشاركتك وحفظها بنجاح",
       status: "submitted",
       submission_id: submission.id,
       objective_score: objectiveScore,
-      advocacy_score: 10,
+      advocacy_score: advocacyScore,
       total_score: totalScore,
       evaluation_status: "approved",
     });
-
   } catch (error) {
     console.error("Unexpected error:", error);
 
