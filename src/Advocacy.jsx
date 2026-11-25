@@ -46,13 +46,19 @@ export default function Advocacy() {
       const currentCase = cases[0]
       const now = Date.now()
 
-      if (currentCase.opens_at && now < new Date(currentCase.opens_at).getTime()) {
+      if (
+        currentCase.opens_at &&
+        now < new Date(currentCase.opens_at).getTime()
+      ) {
         setError('لم يبدأ وقت المسابقة بعد.')
         setLoading(false)
         return
       }
 
-      if (currentCase.closes_at && now > new Date(currentCase.closes_at).getTime()) {
+      if (
+        currentCase.closes_at &&
+        now > new Date(currentCase.closes_at).getTime()
+      ) {
         setError('انتهى وقت المسابقة.')
         setLoading(false)
         return
@@ -92,12 +98,20 @@ export default function Advocacy() {
   const isWrittenStage = (stage) =>
     stage && !['multiple_choice', 'choice'].includes(stage.stage_type)
 
+  const isFinalArgumentStage = (stage) =>
+    stage && (
+      stage.stage_type === 'written_argument' ||
+      Number(stage.stage_number) === 4
+    )
+
   const writtenStages = useMemo(
     () => stages.filter(isWrittenStage),
     [stages]
   )
 
   const allStagesAnswered = stages.every((stage) => {
+    if (isFinalArgumentStage(stage)) return true
+
     const answer = answers[stage.id]
 
     if (isWrittenStage(stage)) {
@@ -123,6 +137,7 @@ export default function Advocacy() {
       )
 
       if (invokeError) throw invokeError
+
       if (!data?.attempt_id) {
         throw new Error(data?.error || 'تعذر بدء المحاولة.')
       }
@@ -201,6 +216,7 @@ export default function Advocacy() {
       )
 
       if (invokeError) throw invokeError
+
       if (!data?.success) {
         throw new Error(data?.error || 'تعذر تسليم المشاركة.')
       }
@@ -233,7 +249,12 @@ export default function Advocacy() {
           <img
             src={`${import.meta.env.BASE_URL}nahj-logo.png`}
             alt="شعار نهج القانوني"
-            style={{ width: 76, height: 76, objectFit: 'contain', borderRadius: 12 }}
+            style={{
+              width: 76,
+              height: 76,
+              objectFit: 'contain',
+              borderRadius: 12,
+            }}
           />
           <span>
             نهج القانوني
@@ -327,42 +348,45 @@ export default function Advocacy() {
               {currentStage.prompt}
             </p>
 
-            {isWrittenStage(currentStage) ? (
-              <label>
-                إجابتك القانونية
-                <textarea
-                  rows={7}
-                  value={answers[currentStage.id] || ''}
-                  onChange={(e) =>
-                    updateAnswer(currentStage.id, e.target.value)
-                  }
-                  placeholder="اكتب تحليلك القانوني..."
-                />
-              </label>
-            ) : (
-              <div className="form">
-                {getOptions(currentStage).map((option, index) => (
-                  <label
-                    key={index}
-                    className="note"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name={`stage-${currentStage.id}`}
-                      checked={answers[currentStage.id] === index}
-                      onChange={() => updateAnswer(currentStage.id, index)}
-                    />
-                    <span>{option}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            {!isFinalArgumentStage(currentStage) &&
+              (isWrittenStage(currentStage) ? (
+                <label>
+                  إجابتك القانونية
+                  <textarea
+                    rows={7}
+                    value={answers[currentStage.id] || ''}
+                    onChange={(e) =>
+                      updateAnswer(currentStage.id, e.target.value)
+                    }
+                    placeholder="اكتب تحليلك القانوني..."
+                  />
+                </label>
+              ) : (
+                <div className="form">
+                  {getOptions(currentStage).map((option, index) => (
+                    <label
+                      key={index}
+                      className="note"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`stage-${currentStage.id}`}
+                        checked={answers[currentStage.id] === index}
+                        onChange={() =>
+                          updateAnswer(currentStage.id, index)
+                        }
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}
 
             <div className="actions">
               {step > 1 && (
@@ -379,9 +403,12 @@ export default function Advocacy() {
                 className="btn"
                 type="button"
                 disabled={
-                  isWrittenStage(currentStage)
-                    ? (answers[currentStage.id] || '').trim().length < 3
-                    : answers[currentStage.id] === undefined
+                  !isFinalArgumentStage(currentStage) &&
+                  (
+                    isWrittenStage(currentStage)
+                      ? (answers[currentStage.id] || '').trim().length < 3
+                      : answers[currentStage.id] === undefined
+                  )
                 }
                 onClick={() => setStep(step + 1)}
               >
@@ -427,7 +454,13 @@ export default function Advocacy() {
               <button
                 className="btn"
                 type="button"
-                disabled={sending || !allStagesAnswered || finalArgument.trim().length < 200 || finalArgument.trim().split(/\s+/).filter(Boolean).length > 5000 || !/\p{L}/u.test(finalArgument)}
+                disabled={
+                  sending ||
+                  !allStagesAnswered ||
+                  finalArgument.trim().length < 200 ||
+                  finalArgument.trim().split(/\s+/).filter(Boolean).length > 5000 ||
+                  !/\p{L}/u.test(finalArgument)
+                }
                 onClick={submitParticipation}
               >
                 {sending ? 'جارٍ حفظ المشاركة...' : 'اعتماد وتسليم المرافعة'}
