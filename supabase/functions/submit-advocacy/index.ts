@@ -43,7 +43,7 @@ type AdvocacyEvaluation = {
 };
 
 async function evaluateAdvocacy(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   input: {
     caseTitle: string;
     caseFacts: string;
@@ -523,7 +523,6 @@ Deno.serve(async (req) => {
 
     return response({
       success: true,
-      message: "تم استلام مشاركتك وحفظها بنجاح",
       status: "submitted",
       submission_id: submission.id,
       objective_score: objectiveScore,
