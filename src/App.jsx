@@ -804,8 +804,19 @@ function Admin() {
                   <div><strong>{(aiUsage.usage.actual_output_tokens || 0).toLocaleString('ar-SA')}</strong><span>رموز الإخراج</span></div>
                 </div>
               ) : <Note>لا توجد بيانات استهلاك بعد.</Note>}
-              {aiUsage && !aiUsage.configured && <Note>التقييم الآلي متوقف حتى يتم تحديد سقف ADVOCACY_AI_MONTHLY_LIMIT في إعدادات Supabase.</Note>}
-              {aiUsage?.usage?.failed_count > 0 && <p className="muted">محاولات تعذر تقييمها هذا الشهر: {aiUsage.usage.failed_count}</p>}
+              {aiUsage && !aiUsage.configured && <Note>التقييم الآلي للمرافعات متوقف حتى يتم تحديد سقف ADVOCACY_AI_MONTHLY_LIMIT في إعدادات Supabase.</Note>}
+              {aiUsage?.usage?.failed_count > 0 && <p className="muted">محاولات تقييم المرافعات المتعثرة هذا الشهر: {aiUsage.usage.failed_count}</p>}
+              {aiUsage && <>
+                <h3>مساعد «أثَر»</h3>
+                <div className="impact-admin-stats">
+                  <div><strong>{aiUsage.impact_usage.request_count.toLocaleString('ar-SA')}</strong><span>طلبات هذا الشهر</span></div>
+                  <div><strong>{aiUsage.impact_monthly_limit ? aiUsage.impact_monthly_limit.toLocaleString('ar-SA') : '—'}</strong><span>السقف الشهري</span></div>
+                  <div><strong>{(aiUsage.impact_usage.actual_input_tokens || 0).toLocaleString('ar-SA')}</strong><span>رموز الإدخال</span></div>
+                  <div><strong>{(aiUsage.impact_usage.actual_output_tokens || 0).toLocaleString('ar-SA')}</strong><span>رموز الإخراج</span></div>
+                </div>
+                {!aiUsage.impact_configured && <Note>مساعد أثَر متوقف حتى يتم تحديد سقف IMPACT_AI_MONTHLY_LIMIT في إعدادات Supabase.</Note>}
+                {aiUsage.impact_usage.failed_count > 0 && <p className="muted">طلبات مساعد أثَر المتعثرة هذا الشهر: {aiUsage.impact_usage.failed_count}</p>}
+              </>}
             </section>
             <section className="card">
               <h2>إدارة المرافعة القانونية</h2>
