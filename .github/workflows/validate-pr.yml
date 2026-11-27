@@ -3,6 +3,8 @@ name: Validate Nahj Legal Platform
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [safe/advocacy-submission-audit]
   workflow_dispatch:
 
 permissions:
