@@ -4,7 +4,7 @@ import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
 import AdvocacyAdmin from './AdvocacyAdmin'
-import { ImpactHome, ImpactPortal, ImpactAdmin, ImpactSurveyAdmin, ImpactSurveyPublic } from './Impact'
+import { ImpactHome, ImpactCategoryDashboard, ImpactPortal, ImpactAdmin, ImpactSurveyAdmin, ImpactSurveyPublic } from './Impact'
 
 function Header() {
   return (
@@ -1077,6 +1077,8 @@ export default function App() {
   if (path === '/competitions') return <Competitions />
   if (path.startsWith('/rate/')) return <ImpactSurveyPublic token={path.slice('/rate/'.length).split('/')[0]} />
   if (path === '/impact') return <Shell><ImpactHome /></Shell>
+  if (path === '/impact/meetings' || path === '/impact/teams' || path === '/impact/partners') return <Shell><ImpactCategoryDashboard category={path.split('/')[2]} /></Shell>
+  if (path.startsWith('/impact/assistant/')) return <Shell><ImpactPortal portal={path.slice('/impact/assistant/'.length).split('/')[0]} /></Shell>
   if (path === '/admin/impact/surveys') return <Shell><ImpactSurveyAdmin /></Shell>
   if (path.startsWith('/impact/')) return <Shell><ImpactPortal portal={path.slice('/impact/'.length).split('/')[0]} /></Shell>
   if (path === '/advocacy') return <Advocacy />
