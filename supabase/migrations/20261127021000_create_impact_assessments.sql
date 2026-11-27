@@ -26,7 +26,7 @@ create policy "Active admins manage impact assessments"
   for all
   to authenticated
   using (public.is_admin())
-  with check (public.is_admin());
+  with check (public.is_admin() and created_by = auth.uid());
 
 comment on table public.impact_assessments is
   'Saved impact assessment reports for Nahj Legal portal. Only active admins may access these records.';
