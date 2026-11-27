@@ -92,3 +92,51 @@
 .impact-error{background:#612f2f33;border:1px solid #a75e5e;color:#f0b8b8;border-radius:8px;padding:9px;font-size:11px}
 @media(max-width:760px){.home-hero{grid-template-columns:1fr;padding:32px 23px}.home-hero-art{min-height:210px}.ring-a{width:200px;height:200px}.ring-b{width:160px;height:230px}.hero-emblem{width:100px;height:100px;font-size:48px}.gateway-grid,.competition-grid,.impact-grid{grid-template-columns:1fr}.home-section-head,.home-bottom-note{align-items:flex-start;flex-direction:column}.impact-intro,.impact-method,.impact-chat-layout{grid-template-columns:1fr;gap:20px}.impact-hero{padding-top:50px}.impact-stats div{padding:0 18px}.impact-chat-layout{gap:13px}.chat-messages{min-height:270px}.impact-guide{order:2}}
 @media(max-width:440px){.home-hero h1{font-size:37px}.gateway-card{padding:22px}.impact-stats div{padding:0 11px}.impact-stats span{font-size:9px}.chat-compose{flex-direction:column}.chat-compose button{min-height:42px}.impact-chat-card,.impact-guide{padding:17px}}
+
+
+/* Impact reports and administration */
+.impact-report-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.impact-report-actions>small{font-size:10px;color:#9eacb6}
+.impact-outline-btn,.impact-primary-btn{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;padding:10px 15px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none}
+.impact-outline-btn{background:transparent;border:1px solid rgba(217,189,125,.42);color:var(--nahj-gold)}
+.impact-primary-btn{background:var(--nahj-gold);border:1px solid var(--nahj-gold);color:#152330}
+.impact-outline-btn:disabled,.impact-primary-btn:disabled{opacity:.55;cursor:not-allowed}
+.impact-report{margin-top:22px;padding:24px;border:1px solid rgba(217,189,125,.35);border-radius:16px;background:#0d1c28}
+.impact-report-head{padding-bottom:18px;border-bottom:1px solid rgba(217,189,125,.22)}
+.impact-report-head h2{font-size:24px;margin:9px 0}.impact-report-head p,.impact-report-section p{font-size:12px;line-height:2;color:#bdc8ce;white-space:pre-wrap}
+.impact-report-section{padding:16px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.impact-report-section h3{font-size:15px;color:var(--nahj-gold);margin:0 0 12px}
+.impact-report-section ul{padding-right:20px;color:#bdc8ce;font-size:12px;line-height:2.1}
+.impact-indicator,.impact-recommendation{padding:12px;margin:8px 0;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.025)}
+.impact-indicator>b,.impact-recommendation>b{font-size:12px}
+.impact-indicator>strong{float:left;color:var(--nahj-gold);font-size:12px}
+.impact-indicator>p,.impact-recommendation>p{margin:8px 0 0;font-size:11px;line-height:1.8;color:#b9c5cc}
+.impact-indicator>small{font-size:10px;color:#82939e}
+.impact-recommendation>span{float:left;font-size:10px;color:var(--nahj-gold)}
+.impact-report-columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.impact-report-disclaimer{padding:12px;margin-top:16px;background:rgba(217,189,125,.08);border:1px solid rgba(217,189,125,.22);border-radius:9px;color:#d9c99f;font-size:11px;line-height:1.9}
+.impact-success{display:block;color:#8ed8b5;font-size:11px}
+.impact-admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}
+.impact-admin-stats>div{padding:17px 12px;border:1px solid var(--nahj-line);border-radius:13px;background:#152b39;display:grid;gap:5px;text-align:center}
+.impact-admin-stats strong{font-size:25px;color:var(--nahj-gold)}.impact-admin-stats span{font-size:10px;color:#aebbc3}
+.impact-admin-layout{display:grid;grid-template-columns:.78fr 1.22fr;gap:15px;align-items:start}
+.impact-admin-list,.impact-admin-detail{padding:18px;border:1px solid var(--nahj-line);border-radius:16px;background:linear-gradient(145deg,#192f40,#10212e);min-width:0}
+.impact-admin-toolbar{display:flex;gap:8px;margin-bottom:14px}
+.impact-admin-toolbar select{min-width:0;flex:1;background:#0b1a26;color:#f5f1e8;border:1px solid #3b5060;border-radius:8px;padding:9px;font-size:11px}
+.impact-report-row{width:100%;display:grid;gap:7px;text-align:right;padding:13px;margin:7px 0;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#f5f1e8;cursor:pointer}
+.impact-report-row.active{border-color:var(--nahj-gold);background:rgba(217,189,125,.08)}
+.impact-report-row>b{font-size:12px}.impact-report-row>small{font-size:10px;color:#91a2ac}.impact-report-row>em{font-style:normal;color:var(--nahj-gold);font-size:10px}
+.impact-admin-detail{min-height:360px}.impact-admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.impact-admin-empty{min-height:300px;display:grid;align-content:center;justify-items:center;text-align:center;color:#9eacb6}
+.impact-admin-empty>span{font-size:38px;color:var(--nahj-gold)}.impact-admin-empty h2{color:#f5f1e8}
+@media(max-width:760px){.impact-admin-layout{grid-template-columns:1fr}.impact-admin-stats{grid-template-columns:repeat(2,1fr)}.impact-report-columns{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff!important;color:#111!important}
+  header,footer,.impact-guide,.chat-head,.chat-messages,.chat-compose,.chat-foot,.impact-report-actions,.impact-breadcrumb,.impact-back,.impact-admin-list,.impact-admin-toolbar,.impact-admin-actions{display:none!important}
+  .impact-page,.impact-chat-layout,.impact-chat-card,.impact-report,.impact-admin-detail{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;color:#111!important;box-shadow:none!important}
+  .impact-report{display:block!important}
+  .impact-report-head p,.impact-report-section p,.impact-report-section ul,.impact-indicator>p,.impact-recommendation>p{color:#222!important}
+  .impact-report-section h3,.impact-report-head h2,.impact-indicator>b,.impact-recommendation>b{color:#111!important}
+  .impact-indicator,.impact-recommendation{break-inside:avoid;border:1px solid #ddd!important;background:#fff!important}
+  .impact-report-disclaimer{color:#333!important;background:#f5f5f5!important}
+}
