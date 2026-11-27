@@ -64,13 +64,6 @@ function formatDate(value) {
 }
 
 function Home() {
-  const [questionSet, setQuestionSet] = useState(null)
-  useEffect(() => {
-    if (!ready) return
-    db.from('question_sets').select('id,title,description').eq('status', 'published')
-      .order('created_at', { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => setQuestionSet(data))
-  }, [])
   return (
     <Shell>
       <main className="home-v2">
