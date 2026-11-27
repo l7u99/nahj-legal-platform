@@ -212,7 +212,7 @@ export default function AdvocacyAdmin() {
     else {
       setCases(data || [])
       const { data: rows, error: rowsError } = await db.from('advocacy_submissions')
-        .select('id,case_id,full_name,answers,final_argument,objective_score,ai_score,ai_feedback,total_score,evaluation_status,submitted_at,evaluated_at,approved_at')
+        .select('id,case_id,full_name,answers,final_argument,objective_score,ai_score,ai_feedback,total_score,evaluation_status,submitted_at,evaluated_at,approved_at,duration_seconds')
         .order('submitted_at', { ascending: false })
       if (rowsError) setError('تعذر تحميل سجل المشاركات: ' + rowsError.message)
       else setAllSubmissions(rows || [])
@@ -238,7 +238,7 @@ export default function AdvocacyAdmin() {
     setActiveCase(item); setStages([]); setSubmissions([]); setSelectedSubmission(null); setError('')
     const [{ data: stageRows, error: stageError }, { data: submissionRows, error: submissionError }] = await Promise.all([
       db.from('advocacy_stages').select('*').eq('case_id', item.id).order('stage_number'),
-      db.from('advocacy_submissions').select('id,full_name,answers,final_argument,objective_score,ai_score,ai_feedback,total_score,evaluation_status,submitted_at,evaluated_at,approved_at').eq('case_id', item.id).order('submitted_at', { ascending: false })
+      db.from('advocacy_submissions').select('id,full_name,answers,final_argument,objective_score,ai_score,ai_feedback,total_score,evaluation_status,submitted_at,evaluated_at,approved_at,duration_seconds').eq('case_id', item.id).order('submitted_at', { ascending: false })
     ])
     if (stageError) setError('تعذر تحميل المراحل: ' + stageError.message)
     else setStages(stageRows || [])
@@ -307,24 +307,24 @@ export default function AdvocacyAdmin() {
         <h2>إحصائيات المرافعة</h2>
         <div className="cols">
           <div className="mini"><b>إجمالي المشاركات</b><h2>{allSubmissions.length}</h2></div>
-          <div className="mini"><b>بانتظار التقييم</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-          <div className="mini"><b>تم تقييمهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
-          <div className="mini"><b>تم اعتمادهم</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
+          <div className="mini"><b>بانتظار المراجعة</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
+          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
+          <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
         </div>
         <p className="muted">إحصائيات جميع مسابقات المرافعة فقط، مستقلة عن مسابقة الأسئلة الأسبوعية.</p>
       </section>
 
       <section className="card">
-        <h2>العشرة الأوائل</h2>
-        <p>ترتيب إداري للمشاركات التي لديها درجة نهائية، ولا يظهر للمتسابقين.</p>
-        {allSubmissions.filter(row => row.total_score !== null && row.total_score !== undefined)
-          .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
-          .slice(0, 10).length ? allSubmissions.filter(row => row.total_score !== null && row.total_score !== undefined)
-            .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
+        <h2>مرشحو المراجعة الأولية</h2>
+        <p>فرز أولي بحسب الدرجة الموضوعية ثم سرعة الإكمال. لا يمثل ترتيبًا نهائيًا أو إعلانًا للفائزين؛ يلزم تدقيق المرافعات واعتماد النتائج يدويًا.</p>
+        {allSubmissions.filter(row => row.evaluation_status === 'pending')
+          .sort((a, b) => Number(b.objective_score || 0) - Number(a.objective_score || 0) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
+          .slice(0, 10).length ? allSubmissions.filter(row => row.evaluation_status === 'pending')
+            .sort((a, b) => Number(b.objective_score || 0) - Number(a.objective_score || 0) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
             .slice(0, 10).map((row, index) => <article className="leader" key={row.id}>
-              <b>#{index + 1} · {row.full_name}</b><span>{row.total_score} / 25</span>
-              <small>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.evaluation_status}</small>
-            </article>) : <p>لا توجد نتائج مرتبة حتى الآن. سيظهر المتصدرون بعد تسجيل مشاركات وتقييمها.</p>}
+              <b>#{index + 1} · {row.full_name}</b><span>{row.objective_score ?? 0} / 15</span>
+              <small>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.duration_seconds == null ? 'المدة غير متاحة' : 'المدة: ' + Math.floor(row.duration_seconds / 60) + ' دقيقة'}</small>
+            </article>) : <p>لا توجد مشاركات بانتظار المراجعة حاليًا.</p>}
       </section>
 
       <section className="card">
@@ -528,7 +528,7 @@ export default function AdvocacyAdmin() {
           <h2>إحصائيات المرافعة</h2>
           <div className="cols">
             <div className="mini"><b>إجمالي المتسابقين</b><h2>{submissions.length}</h2></div>
-            <div className="mini"><b>بانتظار التقييم</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
+            <div className="mini"><b>بانتظار المراجعة</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
             <div className="mini"><b>تم تقييمهم</b><h2>{submissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
             <div className="mini"><b>تم اعتمادهم</b><h2>{submissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
           </div>
