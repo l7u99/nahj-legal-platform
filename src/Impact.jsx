@@ -118,6 +118,9 @@ const portalCards = [
 export function ImpactHome() {
   const access = useImpactAccess()
   const [reports, setReports] = useState([])
+  const [surveys, setSurveys] = useState([])
+  const [responses, setResponses] = useState([])
+  const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -127,17 +130,20 @@ export function ImpactHome() {
     async function loadDashboard() {
       setLoading(true)
       setLoadError('')
-      const { data, error } = await db.from('impact_assessments')
-        .select('id,portal,title,report,status,created_at,updated_at')
-        .order('created_at', { ascending: false })
-        .limit(500)
+      const [reportResult, surveyResult, responseResult, questionResult] = await Promise.all([
+        db.from('impact_assessments').select('id,portal,title,status,created_at').order('created_at', { ascending: false }).limit(500),
+        db.from('impact_surveys').select('id,title,status,category,public_token,created_at').order('created_at', { ascending: false }).limit(250),
+        db.from('impact_survey_responses').select('id,survey_id,answers,submitted_at').order('submitted_at', { ascending: false }).limit(2000),
+        db.from('impact_survey_questions').select('id,survey_id,question_type')
+      ])
       if (!alive) return
-      if (error) {
-        setLoadError('تعذر تحميل إحصائيات قياس الأثر. حاولي تحديث الصفحة.')
-        setReports([])
-      } else {
-        setReports(data || [])
+      if (reportResult.error || surveyResult.error || responseResult.error || questionResult.error) {
+        setLoadError('تعذر تحديث بعض البيانات. بقيت لوحة المؤشرات ظاهرة، ويمكن إعادة المحاولة.')
       }
+      setReports(reportResult.data || [])
+      setSurveys(surveyResult.data || [])
+      setResponses(responseResult.data || [])
+      setQuestions(questionResult.data || [])
       setLoading(false)
     }
     loadDashboard()
@@ -146,124 +152,113 @@ export function ImpactHome() {
 
   if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
 
-  const count = (portal) => reports.filter(row => row.portal === portal).length
-  const reviewed = reports.filter(row => row.status === 'reviewed').length
-  const draft = reports.filter(row => row.status === 'draft').length
-  const archived = reports.filter(row => row.status === 'archived').length
-  const portalSummary = [
-    { id: 'meetings', title: 'تقييم اللقاءات', desc: 'جودة التنظيم والتفاعل وتحقيق أهداف اللقاء', icon: '◷' },
-    { id: 'partners', title: 'تقييم الشركاء', desc: 'قيمة الشراكات والالتزام والأثر المشترك', icon: '◇' },
-    { id: 'teams', title: 'تقييم الفرق والأعضاء', desc: 'الأداء والإنجاز والتعاون والتطوير', icon: '◎' }
-  ]
-  const monthLabels = Array.from({ length: 6 }, (_, index) => {
+  const activeSurveys = surveys.filter(item => item.status === 'published').length
+  const reviewed = reports.filter(item => item.status === 'reviewed').length
+  const draft = reports.filter(item => item.status === 'draft').length
+  const ratingQuestionIds = new Set(questions.filter(item => item.question_type === 'rating').map(item => item.id))
+  const ratingValues = responses.flatMap(row => Object.entries(row.answers || {})
+    .filter(([questionId, value]) => ratingQuestionIds.has(questionId) && Number.isFinite(Number(value)))
+    .map(([, value]) => Number(value)))
+  const averageRating = ratingValues.length ? (ratingValues.reduce((sum, value) => sum + value, 0) / ratingValues.length).toFixed(1) : '—'
+  const categoryLabels = { meetings: 'اللقاءات', partners: 'الشراكات', teams: 'الفرق', general: 'عام' }
+  const categoryRows = ['meetings', 'partners', 'teams', 'general'].map(category => ({
+    category,
+    label: categoryLabels[category],
+    total: surveys.filter(item => item.category === category).length,
+    replies: responses.filter(row => surveys.some(survey => survey.id === row.survey_id && survey.category === category)).length
+  }))
+  const monthly = Array.from({ length: 6 }, (_, index) => {
     const date = new Date()
     date.setDate(1)
     date.setMonth(date.getMonth() - (5 - index))
-    return { key: `${date.getFullYear()}-${date.getMonth()}`, label: date.toLocaleDateString('ar-SA', { month: 'short' }), month: date.getMonth(), year: date.getFullYear() }
-  })
-  const monthly = monthLabels.map(month => ({
-    ...month,
-    total: reports.filter(row => {
-      const date = new Date(row.created_at)
-      return date.getMonth() === month.month && date.getFullYear() === month.year
+    const key = date.getFullYear() + '-' + date.getMonth()
+    const total = responses.filter(row => {
+      const submitted = new Date(row.submitted_at)
+      return submitted.getFullYear() === date.getFullYear() && submitted.getMonth() === date.getMonth()
     }).length
-  }))
+    return { key, label: date.toLocaleDateString('ar-SA', { month: 'short' }), total }
+  })
   const maxMonthly = Math.max(1, ...monthly.map(item => item.total))
+  const dimensions = [
+    ['المؤسسية', 'الحوكمة والسياسات والتوثيق'],
+    ['التشغيلية', 'كفاءة التنفيذ واستمرارية العمليات'],
+    ['المعرفية', 'نقل المعرفة وحفظ الخبرات'],
+    ['الشراكات', 'جودة التعاون والقيمة المشتركة'],
+    ['التطويرية', 'التعلم والتحسين وقياس التقدم']
+  ]
 
   return (
-    <main className="impact-page">
-      <section className="athar-hero">
-        <div className="athar-hero-orbit athar-orbit-one" />
-        <div className="athar-hero-orbit athar-orbit-two" />
-        <div className="athar-hero-copy">
-          <span className="eyebrow">NAHJ ECOSYSTEM · IMPACT INTELLIGENCE</span>
-          <div className="athar-wordmark"><span className="athar-symbol">✧</span><span>أثَــر</span></div>
-          <h1>من البيانات إلى القرار،<br /><em>ومن الإنجاز إلى الاستدامة.</em></h1>
-          <p>منظومة مؤسسية لقياس الأثر، وفهم جودة الأداء، وتحويل النتائج الموثقة إلى فرص تطوير مستمرة.</p>
-          <div className="impact-hero-actions">
-            <Link className="impact-primary" to="/admin/impact">سجل التقارير ومراجعتها ←</Link>
-            <span className="athar-live-note"><i /> لوحة مؤشرات مرتبطة بالبيانات المسجلة</span>
+    <main className="impact-page athar-dashboard">
+      <div className="impact-breadcrumb"><Link to="/">الرئيسية</Link><span>/</span><b>أثَر · لوحة المؤشرات</b></div>
+      <section className="athar-dashboard-hero">
+        <div>
+          <span className="eyebrow">NAHJ LEGAL · IMPACT & SUSTAINABILITY</span>
+          <h1>لوحة <em>أثَر</em></h1>
+          <p>رؤية موحّدة لنتائج المبادرات، جودة التجربة، واستدامة الأثر. جميع المؤشرات تُبنى على الردود والتقارير المسجلة فعليًا.</p>
+          <div className="athar-dashboard-actions">
+            <Link className="impact-primary" to="/admin/impact/surveys">إدارة الاستبيانات <span>←</span></Link>
+            <Link className="impact-outline-btn" to="/admin/impact">سجل التقارير <span>←</span></Link>
           </div>
         </div>
-        <div className="athar-hero-visual" aria-hidden="true">
-          <div className="athar-orbit-core"><span>أثَر</span><small>IMPACT / 01</small></div>
-          <span className="athar-orbit-label label-top">MEASURE</span>
-          <span className="athar-orbit-label label-side">ANALYZE</span>
-          <span className="athar-orbit-label label-bottom">SUSTAIN</span>
-        </div>
+        <div className="athar-dashboard-mark"><span>أثَر</span><small>MEASURE · ANALYZE · IMPROVE</small><i>✧</i></div>
       </section>
 
-      {loadError && <div className="impact-error">{loadError}</div>}
+      {loadError && <div className="impact-inline-notice" role="status">{loadError}</div>}
 
-      <section className="impact-admin-stats">
-        <div><strong>{loading ? '—' : reports.length}</strong><span>إجمالي التقييمات والتقارير</span></div>
-        <div><strong>{loading ? '—' : reviewed}</strong><span>تقارير تمت مراجعتها</span></div>
-        <div><strong>{loading ? '—' : draft}</strong><span>مسودات بانتظار المراجعة</span></div>
-        <div><strong>{loading ? '—' : archived}</strong><span>تقارير مؤرشفة</span></div>
+      <section className="athar-kpi-grid" aria-label="المؤشرات الرئيسية">
+        <article className="athar-kpi"><span>إجمالي الاستجابات</span><strong>{loading ? '—' : responses.length.toLocaleString('ar-SA')}</strong><small>ردود الحضور والمشاركين</small><i>↗</i></article>
+        <article className="athar-kpi"><span>الاستبيانات النشطة</span><strong>{loading ? '—' : activeSurveys.toLocaleString('ar-SA')}</strong><small>روابط تستقبل التقييمات</small><i>◉</i></article>
+        <article className="athar-kpi"><span>متوسط التقييم</span><strong>{loading ? '—' : averageRating}{averageRating !== '—' ? ' / 5' : ''}</strong><small>{ratingValues.length.toLocaleString('ar-SA')} إجابة تقييمية</small><i>☆</i></article>
+        <article className="athar-kpi"><span>تقارير الأثر</span><strong>{loading ? '—' : reports.length.toLocaleString('ar-SA')}</strong><small>{reviewed} مراجَع · {draft} مسودة</small><i>▤</i></article>
       </section>
 
-      <section className="impact-intro">
-        <div><span className="eyebrow">IMPACT SCORECARD</span><h2>مؤشرات <em>المنظومة</em></h2></div>
-        <p>تُحدّث هذه الأرقام من التقارير المحفوظة فعليًا، ولا تعرض نتائج تقديرية أو بيانات غير مسجلة.</p>
+      <section className="athar-dashboard-section-head">
+        <div><span className="eyebrow">PERFORMANCE OVERVIEW</span><h2>قراءة الأداء</h2></div>
+        <span className="athar-data-note"><i /> بيانات فعلية · تتحدث مع كل استجابة</span>
       </section>
 
-      <section className="impact-grid">
-        {portalSummary.map(item => (
-          <article className="impact-card" key={item.id}>
-            <div className="impact-card-top"><span>{item.id === 'meetings' ? '01' : item.id === 'partners' ? '02' : '03'}</span><b>{item.icon}</b></div>
-            <h3>{item.title}</h3>
-            <p>{item.desc}</p>
-            <div className="impact-tags"><span>عدد التقارير المحفوظة</span></div>
-            <div className="impact-card-link"><strong>{loading ? '—' : count(item.id)}</strong> تقرير</div>
-          </article>
-        ))}
-      </section>
-
-      <section className="athar-sustainability-panel">
-        <div className="athar-panel-heading">
-          <span className="eyebrow">SUSTAINABILITY FRAMEWORK · 05 DIMENSIONS</span>
-          <h2>رادار <em>الاستدامة</em></h2>
-          <p>خمسة أبعاد مترابطة تمنح نهج قراءة أوسع من عدد الأنشطة إلى جودة الاستمرارية.</p>
-          <small>{reports.length ? 'سيُبنى التقييم على الأدلة والمؤشرات المعتمدة في التقارير.' : 'الأبعاد معروضة كإطار قياس؛ لا تُحتسب درجات قبل توفر بيانات وأدلة كافية.'}</small>
-        </div>
-        <div className="athar-radar-wrap">
-          <div className="athar-radar" aria-label="مخطط توضيحي لأبعاد الاستدامة الخمسة">
-            <span className="radar-ring ring-outer" /><span className="radar-ring ring-middle" /><span className="radar-ring ring-inner" />
-            <span className="radar-axis axis-one" /><span className="radar-axis axis-two" /><span className="radar-axis axis-three" /><span className="radar-axis axis-four" /><span className="radar-axis axis-five" />
-            <div className="radar-center"><b>أثَر</b><small>5D MODEL</small></div>
+      <section className="athar-analytics-grid">
+        <article className="athar-panel athar-trend-panel">
+          <div className="athar-panel-heading"><div><span className="eyebrow">RESPONSE TREND</span><h3>حركة الاستجابات</h3></div><span className="athar-panel-unit">آخر 6 أشهر</span></div>
+          <div className="athar-bar-chart">
+            {monthly.map(item => <div className="athar-bar-column" key={item.key}>
+              <strong>{loading ? '—' : item.total}</strong>
+              <div className="athar-bar-track"><i style={{ height: loading ? '0%' : (item.total / maxMonthly * 100) + '%' }} /></div>
+              <small>{item.label}</small>
+            </div>)}
           </div>
-          <div className="athar-dimension-list">
-            <div><b>01</b><span><strong>المؤسسية</strong><small>السياسات والحوكمة والتوثيق</small></span></div>
-            <div><b>02</b><span><strong>التشغيلية</strong><small>استمرارية التنفيذ وكفاءة العمليات</small></span></div>
-            <div><b>03</b><span><strong>المعرفية</strong><small>نقل المعرفة وحفظ الخبرات</small></span></div>
-            <div><b>04</b><span><strong>الشراكات</strong><small>قيمة التعاون واستمرارية العلاقات</small></span></div>
-            <div><b>05</b><span><strong>التطويرية</strong><small>التحسين والتعلم وقياس التقدم</small></span></div>
+          {!loading && responses.length === 0 && <div className="athar-chart-empty">سيظهر النشاط هنا عند وصول أول استجابة.</div>}
+        </article>
+
+        <article className="athar-panel">
+          <div className="athar-panel-heading"><div><span className="eyebrow">SURVEY DISTRIBUTION</span><h3>التقييم حسب المجال</h3></div></div>
+          <div className="athar-category-list">
+            {categoryRows.map(item => <div className="athar-category-row" key={item.category}>
+              <div><b>{item.label}</b><small>{item.total} استبيان · {item.replies} استجابة</small></div>
+              <strong>{item.replies.toLocaleString('ar-SA')}</strong>
+              <span><i style={{ width: (responses.length ? item.replies / responses.length * 100 : 0) + '%' }} /></span>
+            </div>)}
           </div>
-        </div>
+          {!loading && surveys.length === 0 && <div className="athar-chart-empty">لم تُنشأ استبيانات بعد. ابدئي بإنشاء أول استبيان.</div>}
+        </article>
       </section>
 
-      <section className="impact-method">
-        <div className="method-copy">
-          <span className="eyebrow">EARLY WARNING & TREND</span>
-          <h2>مؤشر النشاط <em>خلال آخر 6 أشهر</em></h2>
-          <p>عدد التقارير التي تم حفظها في كل شهر، اعتمادًا على تاريخ إنشاء التقرير.</p>
-        </div>
-        <div className="method-steps">
-          {monthly.map(item => (
-            <div key={item.key}>
-              <b>{item.label}</b>
-              <span style={{ flex: 1 }}>
-                <strong>{loading ? '—' : item.total + ' تقرير'}</strong>
-                <span style={{ display: 'block', height: 7, marginTop: 7, borderRadius: 8, background: 'rgba(199,169,107,.16)', overflow: 'hidden' }}>
-                  <span style={{ display: 'block', width: loading ? '0%' : (item.total / maxMonthly * 100) + '%', height: '100%', background: '#c7a96b', borderRadius: 8 }} />
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
+      <section className="athar-dashboard-section-head">
+        <div><span className="eyebrow">SUSTAINABILITY FRAMEWORK</span><h2>أبعاد الاستدامة</h2></div>
+        <span className="athar-panel-unit">نموذج قياس من 5 أبعاد</span>
+      </section>
+      <section className="athar-sustainability-grid">
+        {dimensions.map(([name, description], index) => <article className="athar-dimension-card" key={name}>
+          <div><b>0{index + 1}</b><span>0%</span></div><h3>{name}</h3><p>{description}</p>
+          <div className="athar-dimension-track"><i style={{ width: '0%' }} /></div>
+          <small>بانتظار بيانات القياس</small>
+        </article>)}
       </section>
 
-      <div className="impact-back"><Link to="/">العودة إلى بوابة نهج الرئيسية ←</Link></div>
+      <section className="athar-next-step">
+        <div><span className="eyebrow">START MEASURING</span><h2>{surveys.length ? 'تابعي قياس الأثر وتطويره' : 'ابدئي بأول خطوة نحو قياس الأثر'}</h2><p>أنشئي استبيانًا، شاركي رابطه مع الحضور، وستظهر النتائج تلقائيًا هنا دون إدخال يدوي.</p></div>
+        <Link className="impact-primary" to="/admin/impact/surveys">إنشاء استبيان جديد ←</Link>
+      </section>
     </main>
   )
 }
