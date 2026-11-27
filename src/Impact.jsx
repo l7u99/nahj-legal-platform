@@ -149,7 +149,7 @@ export function ImpactHome() {
   const draft = reports.filter(item => item.status === 'draft').length
   const ratingQuestionIds = new Set(questions.filter(item => item.question_type === 'rating').map(item => item.id))
   const ratingValues = responses.flatMap(row => Object.entries(row.answers || {}).filter(([id, value]) => ratingQuestionIds.has(id) && Number.isFinite(Number(value))).map(([, value]) => Number(value)))
-  const averageRating = ratingValues.length ? (ratingValues.reduce((sum, value) => sum + value, 0) / ratingValues.length).toFixed(1) : '—'
+  const averageRating = ratingValues.length ? (ratingValues.reduce((sum, value) => sum + value, 0) / ratingValues.length).toFixed(1) : '0.0'
   const categoryLabels = { meetings: 'اللقاءات', partners: 'الشراكات', teams: 'الفرق', general: 'عام' }
   const categoryRows = ['meetings','partners','teams','general'].map(category => ({ category, label: categoryLabels[category], total: surveys.filter(s => s.category === category).length, replies: responses.filter(r => surveys.some(s => s.id === r.survey_id && s.category === category)).length }))
   const monthly = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5-index)); return { key: date.getFullYear()+'-'+date.getMonth(), label: date.toLocaleDateString('ar-SA',{month:'short'}), total: responses.filter(row => { const d = new Date(row.submitted_at); return d.getFullYear()===date.getFullYear() && d.getMonth()===date.getMonth() }).length } })
@@ -163,7 +163,7 @@ export function ImpactHome() {
       <section className="athar-kpi-grid">
         <article className="athar-kpi"><span>إجمالي الاستجابات</span><strong>{loading?'—':responses.length.toLocaleString('ar-SA')}</strong><small>ردود الحضور والمشاركين</small><i>↗</i></article>
         <article className="athar-kpi"><span>الاستبيانات النشطة</span><strong>{loading?'—':activeSurveys.toLocaleString('ar-SA')}</strong><small>روابط تستقبل التقييمات</small><i>◉</i></article>
-        <article className="athar-kpi"><span>متوسط التقييم</span><strong>{loading?'—':averageRating}{averageRating!=='—'?' / 5':''}</strong><small>{ratingValues.length.toLocaleString('ar-SA')} إجابة تقييمية</small><i>☆</i></article>
+        <article className="athar-kpi"><span>متوسط التقييم</span><strong>{loading?'—':averageRating} / 5</strong><small>{ratingValues.length.toLocaleString('ar-SA')} إجابة تقييمية</small><i>☆</i></article>
         <article className="athar-kpi"><span>تقارير الأثر</span><strong>{loading?'—':reports.length.toLocaleString('ar-SA')}</strong><small>{reviewed} مراجَع · {draft} مسودة</small><i>▤</i></article>
       </section>
       <section className="athar-dashboard-section-head"><div><span className="eyebrow">PERFORMANCE OVERVIEW</span><h2>قراءة الأداء</h2></div><span className="athar-data-note"><i /> بيانات فعلية · تتحدث مع كل استجابة</span></section>
@@ -577,7 +577,7 @@ export function ImpactSurveyAdmin() {
   }
 
   async function copySurveyLink(survey) {
-    const url = window.location.origin + '/rate/' + survey.public_token
+    const url = window.location.origin + (import.meta.env.BASE_URL || '/') + 'rate/' + survey.public_token
     try { await navigator.clipboard.writeText(url); setNotice('تم نسخ رابط التقييم.') }
     catch { setNotice('رابط التقييم: ' + url) }
   }
