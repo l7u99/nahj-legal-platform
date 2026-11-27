@@ -238,3 +238,95 @@
   .athar-dimension-list{grid-template-columns:1fr}
   .athar-sustainability-panel{padding:22px}
 }
+
+
+/* NAHJ homepage — unified institutional ecosystem */
+.nahj-home{width:min(1160px,92%);padding:34px 0 65px}
+.nahj-home-hero{min-height:475px;display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:30px;padding:48px 5%;position:relative;overflow:hidden;border:1px solid rgba(200,169,107,.25);border-radius:28px;background:radial-gradient(ellipse at 80% 50%,rgba(49,86,109,.36),transparent 42%),radial-gradient(ellipse at 5% 5%,rgba(200,169,107,.12),transparent 38%),linear-gradient(130deg,#1b3346,#101f2d 65%,#0b1925)}
+.nahj-home-copy{position:relative;z-index:2}
+.nahj-home-kicker{display:flex;align-items:center;gap:8px;margin-top:24px;color:#b9c7cf;font-size:11px}
+.nahj-home-kicker>span{width:7px;height:7px;border-radius:50%;background:#c8a96b;box-shadow:0 0 12px rgba(200,169,107,.7)}
+.nahj-home-hero h1{font-size:clamp(39px,5.3vw,65px);line-height:1.4;letter-spacing:-1.7px;margin:14px 0 15px;color:#f2efe8}
+.nahj-home-hero h1 em,.nahj-section-intro h2 em,.nahj-athar-copy h2 em,.nahj-closing h2 em{font-style:normal;color:#d4b779}
+.nahj-home-copy>p{max-width:570px;color:#b5c2ca;font-size:14px;line-height:2.1}
+.nahj-home-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:26px 0 22px}
+.nahj-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:16px;padding:13px 19px;border-radius:9px;background:linear-gradient(125deg,#e0c98f,#b38f51);color:#142433;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.nahj-btn-primary span{font-size:17px;line-height:1}
+.nahj-btn-quiet{font-size:12px;color:#e3d3ad;padding:10px 0}
+.nahj-home-proof{display:flex;align-items:center;gap:11px;flex-wrap:wrap;color:#8fa2ae;font-size:10px}
+.nahj-home-proof i{width:3px;height:3px;border-radius:50%;background:#c8a96b}
+.nahj-home-visual{height:350px;position:relative;display:grid;place-items:center;isolation:isolate}
+.nahj-home-visual img{position:relative;z-index:2;width:190px;height:190px;object-fit:contain;padding:13px;border-radius:31px;background:rgba(255,255,255,.96);border:1px solid rgba(212,183,121,.75);box-shadow:0 0 75px rgba(49,86,109,.45),0 0 35px rgba(200,169,107,.12);transform:rotate(-6deg)}
+.nahj-visual-orbit{position:absolute;border:1px solid rgba(200,169,107,.24);border-radius:50%}
+.orbit-large{width:310px;height:310px;transform:rotate(28deg)}
+.orbit-small{width:230px;height:330px;transform:rotate(-43deg);border-color:rgba(110,145,165,.38);border-style:dashed}
+.nahj-visual-glow{position:absolute;width:220px;height:220px;border-radius:50%;background:rgba(49,86,109,.24);filter:blur(35px)}
+.nahj-visual-caption{position:absolute;bottom:0;font-size:8px;letter-spacing:3px;color:#91a4af}
+.nahj-principles{display:grid;grid-template-columns:repeat(4,1fr);margin:18px 0 0;padding:20px 10px;border:1px solid rgba(110,145,165,.18);border-radius:16px;background:linear-gradient(90deg,rgba(24,48,66,.82),rgba(17,34,48,.82))}
+.nahj-principles>div{display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 10px;border-left:1px solid rgba(255,255,255,.08)}
+.nahj-principles>div:last-child{border-left:0}
+.nahj-principles b{font-size:19px;font-weight:400;color:#c8a96b}
+.nahj-principles span{display:grid;gap:4px}
+.nahj-principles strong{font-size:12px;color:#f0ede7}
+.nahj-principles small{font-size:9px;color:#93a5af}
+.nahj-section-intro{display:flex;align-items:end;justify-content:space-between;gap:35px;margin:78px 0 26px}
+.nahj-section-intro h2{font-size:35px;line-height:1.55;margin:10px 0 0}
+.nahj-section-intro>p{max-width:390px;color:#aab9c2;font-size:12px;line-height:2.1;margin-bottom:6px}
+.nahj-products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.nahj-product-card{position:relative;min-height:365px;display:flex;flex-direction:column;padding:23px;border:1px solid rgba(110,145,165,.24);border-radius:19px;background:linear-gradient(150deg,#1b3447,#102332);overflow:hidden;transition:transform .22s,border-color .22s}
+.nahj-product-card:hover{transform:translateY(-5px);border-color:rgba(200,169,107,.62)}
+.nahj-product-card:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;left:-90px;top:70px;background:rgba(49,86,109,.13);filter:blur(10px);pointer-events:none}
+.product-athar{background:radial-gradient(circle at 90% 8%,rgba(200,169,107,.14),transparent 36%),linear-gradient(150deg,#263b43,#122735);border-color:rgba(200,169,107,.38)}
+.nahj-product-meta{display:flex;align-items:center;justify-content:space-between;color:#c8a96b;font-size:9px;letter-spacing:1.5px}
+.nahj-product-meta b{font-size:21px;font-weight:400}
+.nahj-product-icon{width:48px;height:48px;display:grid;place-items:center;margin:27px 0 12px;border:1px solid rgba(200,169,107,.38);border-radius:14px;color:#d3b779;font-size:23px;background:rgba(200,169,107,.055)}
+.nahj-product-card h3{font-size:22px;margin:5px 0 7px;color:#f0ede7}
+.nahj-product-card>p{font-size:12px;line-height:2;color:#aebdc5;margin:0 0 15px}
+.nahj-product-tags{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.nahj-product-tags span{font-size:9px;color:#d5c49e;border:1px solid rgba(200,169,107,.24);border-radius:20px;padding:5px 9px}
+.nahj-product-link{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:15px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:#d9bf83;font-weight:700}
+.nahj-featured-challenge{display:grid;gap:6px;margin:0 0 16px;padding:11px;border:1px solid rgba(200,169,107,.24);border-radius:10px;background:rgba(200,169,107,.06)}
+.nahj-featured-challenge small{font-size:9px;color:#9eacb6}
+.nahj-featured-challenge strong{font-size:11px;color:#eee7d8}
+.nahj-featured-challenge a{font-size:10px;color:#d9bf83}
+.nahj-athar-feature{display:grid;grid-template-columns:.88fr 1.12fr;align-items:center;gap:48px;margin-top:68px;padding:35px 5%;border:1px solid rgba(200,169,107,.28);border-radius:23px;background:radial-gradient(ellipse at 15% 50%,rgba(49,86,109,.3),transparent 45%),linear-gradient(125deg,#172e3e,#10212e)}
+.nahj-athar-art{height:275px;position:relative;display:grid;place-items:center;isolation:isolate}
+.nahj-athar-orbit{position:absolute;width:245px;height:245px;border:1px solid rgba(200,169,107,.34);border-radius:50%;transform:rotate(28deg)}
+.nahj-athar-orbit:after{content:"";position:absolute;inset:24px -12px;border:1px dashed rgba(110,145,165,.38);border-radius:50%;transform:rotate(55deg)}
+.nahj-athar-core{width:130px;height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(200,169,107,.65);border-radius:31px;background:linear-gradient(145deg,#31566d,#142a3b);box-shadow:0 0 60px rgba(49,86,109,.4);color:#f0e8d8;font-size:34px;font-weight:700;transform:rotate(-7deg)}
+.nahj-athar-core small{font-size:7px;letter-spacing:1.5px;color:#d4b779}
+.athar-art-label{position:absolute;bottom:0;font-size:8px;letter-spacing:2px;color:#91a5b0}
+.nahj-athar-copy h2{font-size:29px;line-height:1.65;margin:12px 0}
+.nahj-athar-copy>p{font-size:12px;color:#b3c0c8;line-height:2.1}
+.nahj-athar-copy ul{list-style:none;padding:0;margin:17px 0 22px;display:grid;gap:9px}
+.nahj-athar-copy li{position:relative;padding-right:19px;color:#d5dfe3;font-size:11px}
+.nahj-athar-copy li:before{content:"";position:absolute;right:0;top:8px;width:6px;height:6px;border-radius:50%;background:#c8a96b;box-shadow:0 0 8px rgba(200,169,107,.45)}
+.nahj-closing{position:relative;overflow:hidden;text-align:center;margin-top:65px;padding:54px 20px;border:1px solid rgba(110,145,165,.2);border-radius:22px;background:radial-gradient(ellipse at 50% 0%,rgba(49,86,109,.27),transparent 60%),#122433}
+.nahj-closing h2{font-size:clamp(29px,4vw,43px);line-height:1.6;margin:12px 0}
+.nahj-closing>p{max-width:560px;margin:0 auto 20px;color:#aebdc5;font-size:12px;line-height:2}
+.nahj-closing>a{font-size:12px;color:#d9bf83;font-weight:700}
+@media(max-width:850px){
+  .nahj-home-hero{grid-template-columns:1fr;padding:34px 6%;gap:5px}
+  .nahj-home-visual{height:260px}
+  .nahj-home-visual img{width:150px;height:150px}
+  .orbit-large{width:240px;height:240px}.orbit-small{width:180px;height:260px}
+  .nahj-products-grid{grid-template-columns:1fr 1fr}
+  .nahj-product-card:last-child{grid-column:1/-1;min-height:300px}
+  .nahj-athar-feature{grid-template-columns:1fr;gap:20px}
+  .nahj-athar-art{height:230px}
+}
+@media(max-width:560px){
+  .nahj-home{padding-top:20px}
+  .nahj-home-hero{padding:29px 21px;border-radius:20px}
+  .nahj-home-hero h1{font-size:39px}
+  .nahj-home-visual{height:220px}
+  .nahj-principles{grid-template-columns:1fr 1fr;gap:14px;padding:16px 8px}
+  .nahj-principles>div{justify-content:flex-start;border:0;padding:4px 8px}
+  .nahj-section-intro{align-items:flex-start;flex-direction:column;gap:10px;margin:54px 0 20px}
+  .nahj-section-intro h2{font-size:29px}
+  .nahj-products-grid{grid-template-columns:1fr}
+  .nahj-product-card,.nahj-product-card:last-child{grid-column:auto;min-height:315px}
+  .nahj-athar-feature{padding:24px 20px;margin-top:45px}
+  .nahj-athar-copy h2{font-size:24px}
+  .nahj-closing{padding:40px 18px;margin-top:45px}
+}
