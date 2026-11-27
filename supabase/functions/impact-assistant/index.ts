@@ -22,7 +22,8 @@ async function buildSurveyContext(supabase: ReturnType<typeof createClient>, por
     .limit(50);
   if (surveyError) throw new Error("Unable to load impact surveys");
 
-  const surveyIds = (surveys || []).map((item: any) => item.id);
+  const surveyRows: any[] = (surveys || []) as any[];
+  const surveyIds = surveyRows.map((item: any) => item.id);
   if (!surveyIds.length) {
     return {
       surveys: [],
@@ -49,9 +50,9 @@ async function buildSurveyContext(supabase: ReturnType<typeof createClient>, por
     throw new Error("Unable to load impact survey results");
   }
 
-  const questions = questionResult.data || [];
-  const responses = responseResult.data || [];
-  const surveySummaries = (surveys || []).map((survey: any) => {
+  const questions: any[] = (questionResult.data || []) as any[];
+  const responses: any[] = (responseResult.data || []) as any[];
+  const surveySummaries = surveyRows.map((survey: any) => {
     const surveyResponses = responses.filter((row: any) => row.survey_id === survey.id);
     return {
       title: survey.title,
