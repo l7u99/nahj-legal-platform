@@ -123,9 +123,9 @@ function Home() {
             <p>البوابات متاحة للبدء حتى لو لم تُسجّل أي تقييمات بعد.</p>
           </div>
           <div className="home-portals-grid">
-            <Link className="home-portal-card" to="/impact/meetings"><span>01 · اللقاءات</span><strong>تقييم اللقاءات</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
-            <Link className="home-portal-card" to="/impact/partners"><span>02 · الشراكات</span><strong>تقييم الشركاء</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
-            <Link className="home-portal-card" to="/impact/teams"><span>03 · الفرق</span><strong>تقييم الفرق والأعضاء</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
+            <Link className="home-portal-card" to="/impact"><span>01 · اللقاءات</span><strong>إحصائيات تقييم اللقاءات</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
+            <Link className="home-portal-card" to="/impact"><span>02 · الشراكات</span><strong>إحصائيات تقييم الشركاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
+            <Link className="home-portal-card" to="/impact"><span>03 · الفرق</span><strong>إحصائيات تقييم الفرق والأعضاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
           </div>
           <div className="home-ai-callout">
             <div><span className="eyebrow">POWERED BY OPENAI</span><h3>مساعد أثَر الذكي</h3><p>مساعد تفاعلي يحاورك خطوة بخطوة، وينظم البيانات ويُعدّ تقريرًا أوليًا عن الأثر وفرص التحسين.</p></div>
