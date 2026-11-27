@@ -190,8 +190,7 @@ export default function Advocacy() {
       return
     }
 
-    if (wordCount > 5000) {
-      setError('الحد الأعلى للمرافعة هو 5,000 كلمة.')
+    if (characterCount > 5000) {\n      setError('الحد الأعلى للمرافعة هو 5,000 حرف.')
       return
     }
 
@@ -432,11 +431,13 @@ export default function Advocacy() {
               نص المرافعة
               <textarea
                 rows={12}
+                maxLength={5000}
                 value={finalArgument}
                 onChange={(e) => setFinalArgument(e.target.value)}
                 placeholder="بسم الله، وبعد... اكتب مرافعتك القانونية هنا."
               />
             </label>
+            <p className="muted" style={{ textAlign: 'left' }}>{Array.from(finalArgument).length.toLocaleString('ar-SA')} / 5,000 حرف · الحد الأدنى 200 حرف</p>
 
             <div className="note">
               تأكد من مراجعة إجاباتك ومرافعتك قبل اعتماد المشاركة.
@@ -483,8 +484,26 @@ export default function Advocacy() {
               <p>
                 <strong>درجة المراحل الموضوعية:</strong> {result.objective_score ?? 0} / 15
               </p>
-              <p><strong>حالة المرافعة:</strong> بانتظار المراجعة البشرية.</p>
-              <p>سيتم تدقيق المرافعات واختيار العشرة الأوائل وفق معايير المسابقة، ثم إعلان النتائج بعد اعتمادها.</p>
+              {result.evaluation_status === 'evaluated' && result.ai_score != null ? (
+                <>
+                  <p><strong>تقييم المرافعة بالذكاء الاصطناعي:</strong> {Number(result.ai_score).toLocaleString('ar-SA')} / 10</p>
+                  {Array.isArray(result.ai_feedback?.criteria) && result.ai_feedback.criteria.map(item => (
+                    <p key={item.key}><strong>{item.label}:</strong> {item.score} / 2 — {item.reason}</p>
+                  ))}
+                  {['strengths', 'weaknesses', 'potential_errors', 'improvements'].map((field) => (
+                    Array.isArray(result.ai_feedback?.[field]) && result.ai_feedback[field].length > 0 && (
+                      <div key={field}>
+                        <strong>{{ strengths: 'نقاط القوة', weaknesses: 'نقاط تحتاج تحسينًا', potential_errors: 'أخطاء محتملة', improvements: 'اقتراحات التحسين' }[field]}</strong>
+                        <ul>{result.ai_feedback[field].map((item, index) => <li key={index}>{item}</li>)}</ul>
+                      </div>
+                    )
+                  ))}
+                  <p className="muted">{result.ai_feedback?.disclaimer}</p>
+                </>
+              ) : (
+                <p><strong>حالة التقييم:</strong> بانتظار التقييم الآلي، وتم حفظ مشاركتك ولن تضيع.</p>
+              )}
+              <p>سيتم تدقيق النتائج واعتمادها قبل إعلان العشرة الأوائل.</p>
 
             </div>
 
