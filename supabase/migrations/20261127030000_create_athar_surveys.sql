@@ -25,6 +25,7 @@ create table if not exists public.impact_survey_questions (
   question_type text not null check (question_type in ('rating','choice','text')),
   options jsonb not null default '[]'::jsonb check (jsonb_typeof(options) = 'array'),
   is_required boolean not null default true,
+  dimension text not null default 'operational' check (dimension in ('institutional','operational','knowledge','partnerships','development')),
   position smallint not null default 1 check (position > 0),
   created_at timestamptz not null default now()
 );
