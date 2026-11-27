@@ -4,7 +4,7 @@ import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
 import AdvocacyAdmin from './AdvocacyAdmin'
-import { ImpactHome, ImpactPortal } from './Impact'
+import { ImpactHome, ImpactPortal, ImpactAdmin } from './Impact'
 
 function Header() {
   return (
@@ -771,6 +771,11 @@ function Admin() {
         ) : (
           <>
             <section className="card">
+              <h2>منظومة قياس الأثر والاستدامة</h2>
+              <p>استعراض التقارير المحفوظة ومتابعة مراجعتها وأرشفتها.</p>
+              <Link className="btn" to="/admin/impact">فتح سجل تقارير الأثر ←</Link>
+            </section>
+            <section className="card">
               <h2>إدارة المرافعة القانونية</h2>
               <p>إدارة مستقلة لقضايا المرافعة ومراحلها وسجل متسابقيها.</p>
               <Link className="btn" to="/admin/advocacy">فتح إدارة المرافعة ←</Link>
@@ -1045,6 +1050,7 @@ export default function App() {
   if (path.startsWith('/impact/')) return <Shell><ImpactPortal /></Shell>
   if (path === '/advocacy') return <Advocacy />
   if (path === '/admin/advocacy') return <AdvocacyAdmin />
+  if (path === '/admin/impact') return <Shell><ImpactAdmin /></Shell>
   if (path === '/admin') return <Admin />
   return <Home />
 }
