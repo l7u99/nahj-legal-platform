@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { db } from './lib'
 
 function useImpactAccess() {
@@ -176,12 +176,8 @@ export function ImpactHome() {
   )
 }
 
-export function ImpactPortal() {
+export function ImpactPortal({ portal }) {
   const access = useImpactAccess()
-  const { pathname } = useLocation()
-  const basePath = import.meta.env.BASE_URL || '/'
-  const routePath = pathname.startsWith(basePath) ? `/${pathname.slice(basePath.length)}` : pathname
-  const portal = routePath.replace(/\/+$/, '').split('/').pop()
   const info = portalInfo[portal]
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
