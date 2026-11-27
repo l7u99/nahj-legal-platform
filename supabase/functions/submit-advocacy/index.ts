@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     }
 
     const characterCount = Array.from(finalArgument).length;
-    const hasLetter = /\\p{L}/u.test(finalArgument);
+    const hasLetter = /\p{L}/u.test(finalArgument);
 
     if (characterCount < 200) {
       return response({
