@@ -118,6 +118,10 @@ export function ImpactPortal() {
   async function sendMessage(event) {
     event.preventDefault()
     const content = draft.trim()
+    if (!session?.access_token) {
+      setError('سجّلي دخولك بحساب مسؤول نشط لاستخدام مساعد أثَر.')
+      return
+    }
     if (!content || busy) return
     const nextMessages = [...messages, { role: 'user', content }]
     setMessages(nextMessages)
@@ -139,6 +143,10 @@ export function ImpactPortal() {
   }
 
   async function generateReport() {
+    if (!session?.access_token) {
+      setError('سجّلي دخولك بحساب مسؤول نشط لإعداد تقرير الأثر.')
+      return
+    }
     if (generatingReport || busy || messages.filter(message => message.role === 'user').length < 2 || messages[messages.length - 1]?.role !== 'assistant') return
     setGeneratingReport(true)
     setError('')
@@ -203,7 +211,7 @@ export function ImpactPortal() {
           <span className="eyebrow">NAHJ AI GUIDE</span>
           <h2>مساعد نهج الذكي</h2>
           <p>مساعد تفاعلي يطرح سؤالًا واحدًا في كل مرة، ويطلب التوضيح عند الحاجة، ثم يبني معك قراءة أولية للنتائج.</p>
-          {!session && <div className="note">لحفظ التقرير في السجل الإداري، سجّل دخولك كمسؤول قبل بدء الجلسة. <Link to="/admin">دخول المسؤولين ←</Link></div>}
+          {!session && <div className="note">استخدام مساعد أثَر وحفظ التقارير متاحان للمسؤولين النشطين فقط. <Link to="/admin">دخول المسؤولين ←</Link></div>}
           <div className="guide-points"><span>✓ أسئلة متدرجة</span><span>✓ تحليل مرتبط بالسياق</span><span>✓ فرص تحسين عملية</span></div>
           <button type="button" className="impact-reset" onClick={resetConversation} disabled={busy || generatingReport}>بدء تقييم جديد ↻</button>
           <small>لا تدخل بيانات شخصية أو معلومات سرية.</small>
@@ -215,13 +223,17 @@ export function ImpactPortal() {
             {busy && <div className="chat-message assistant"><span>نهج</span><p className="typing">أراجع إجابتك وأجهز الخطوة التالية…</p></div>}
           </div>
           {error && <div className="impact-error">{error}</div>}
-          <form className="chat-compose" onSubmit={sendMessage}>
-            <textarea value={draft} onChange={event => setDraft(event.target.value)} placeholder="اكتب إجابتك هنا…" rows="2" maxLength="3000" disabled={busy} />
-            <button type="submit" disabled={busy || !draft.trim()}>{busy ? '...' : 'إرسال ←'}</button>
-          </form>
+          {session?.access_token ? (
+            <form className="chat-compose" onSubmit={sendMessage}>
+              <textarea value={draft} onChange={event => setDraft(event.target.value)} placeholder="اكتب إجابتك هنا…" rows="2" maxLength="3000" disabled={busy} />
+              <button type="submit" disabled={busy || !draft.trim()}>{busy ? '...' : 'إرسال ←'}</button>
+            </form>
+          ) : (
+            <div className="note impact-auth-required">يلزم تسجيل الدخول بحساب مسؤول نشط قبل بدء جلسة قياس الأثر. <Link to="/admin">تسجيل الدخول ←</Link></div>
+          )}
           <div className="chat-foot">تُرسل الرسالة عند الضغط على «إرسال» فقط · راجع المخرجات قبل اعتماد أي قرار</div>
           <div className="impact-report-actions">
-            <button type="button" className="impact-outline-btn" onClick={generateReport} disabled={generatingReport || busy || messages.filter(message => message.role === 'user').length < 2 || messages[messages.length - 1]?.role !== 'assistant'}>
+            <button type="button" className="impact-outline-btn" onClick={generateReport} disabled={!session?.access_token || generatingReport || busy || messages.filter(message => message.role === 'user').length < 2 || messages[messages.length - 1]?.role !== 'assistant'}>
               {generatingReport ? 'جارٍ إعداد التقرير…' : 'إعداد تقرير الأثر'}
             </button>
             <small>يتاح بعد إجابتين على الأقل واكتمال رد المساعد، ويُنشأ عند الطلب فقط.</small>
