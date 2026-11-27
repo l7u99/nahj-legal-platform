@@ -308,8 +308,8 @@ export default function AdvocacyAdmin() {
         <div className="cols">
           <div className="mini"><b>إجمالي المشاركات</b><h2>{allSubmissions.length}</h2></div>
           <div className="mini"><b>بانتظار المراجعة</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
-          <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
+          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required'].includes(row.evaluation_status) || (row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined)).length}</h2></div>
+          <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined).length}</h2></div>
         </div>
         <p className="muted">إحصائيات جميع مسابقات المرافعة فقط، مستقلة عن مسابقة الأسئلة الأسبوعية.</p>
       </section>
@@ -330,7 +330,7 @@ export default function AdvocacyAdmin() {
       <section className="card">
         <h2>سجل المتسابقين ({allSubmissions.length})</h2>
         {allSubmissions.length ? allSubmissions.map(row => <article className="review" key={row.id}>
-          <b>{row.full_name}</b><p>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.evaluation_status} · {dateLabel(row.submitted_at)}</p>
+          <b>{row.full_name}</b><p>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.evaluation_status === 'approved' && row.ai_score == null ? 'حالة اعتماد قديمة تحتاج تدقيقًا' : row.evaluation_status} · {dateLabel(row.submitted_at)}</p>
         </article>) : <p>لا يوجد متسابقون حتى الآن.</p>}
       </section>
 
@@ -339,7 +339,7 @@ export default function AdvocacyAdmin() {
         <p>سجل مستقل يعرض إجابات كل متسابق ومرافعته الختامية.</p>
         {allSubmissions.length ? allSubmissions.map(row => <article className="review" key={row.id}>
           <b>{row.full_name} · {cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'}</b>
-          <p>تاريخ الإرسال: {dateLabel(row.submitted_at)} · الحالة: {row.evaluation_status} · الدرجة: {row.total_score ?? 'بانتظار التقييم'}</p>
+          <p>تاريخ الإرسال: {dateLabel(row.submitted_at)} · الحالة: {row.evaluation_status === 'approved' && row.ai_score == null ? 'اعتماد قديم غير متحقق — يحتاج تدقيقًا' : row.evaluation_status} · الدرجة: {row.total_score ?? 'بانتظار المراجعة'}</p>
           <details><summary>عرض تفاصيل المشاركة</summary>
             <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
             <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
