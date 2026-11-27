@@ -203,6 +203,7 @@ export function ImpactPortal() {
           <span className="eyebrow">NAHJ AI GUIDE</span>
           <h2>مساعد نهج الذكي</h2>
           <p>مساعد تفاعلي يطرح سؤالًا واحدًا في كل مرة، ويطلب التوضيح عند الحاجة، ثم يبني معك قراءة أولية للنتائج.</p>
+          {!session && <div className="note">لحفظ التقرير في السجل الإداري، سجّل دخولك كمسؤول قبل بدء الجلسة. <Link to="/admin">دخول المسؤولين ←</Link></div>}
           <div className="guide-points"><span>✓ أسئلة متدرجة</span><span>✓ تحليل مرتبط بالسياق</span><span>✓ فرص تحسين عملية</span></div>
           <button type="button" className="impact-reset" onClick={resetConversation}>بدء تقييم جديد ↻</button>
           <small>لا تدخل بيانات شخصية أو معلومات سرية.</small>
