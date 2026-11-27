@@ -146,7 +146,8 @@ function useAtharSurveyData(enabled) {
 const atharCategoryMeta = {
   meetings: { number: '01', title: 'تقييم اللقاءات والفعاليات', shortTitle: 'اللقاءات والفعاليات', description: 'قياس جودة التجربة، تحقق أهداف اللقاء، تفاعل الحضور، والتنظيم والمخرجات.', dimensions: ['جودة التنظيم', 'وضوح الأهداف', 'تفاعل الحضور', 'تحقق المخرجات'] },
   teams: { number: '02', title: 'تقييم الأعضاء وفريق العمل', shortTitle: 'الأعضاء وفريق العمل', description: 'متابعة الأداء والإنجاز والالتزام والتعاون والمبادرة واحتياجات التطوير.', dimensions: ['الإنجاز', 'الالتزام', 'التعاون', 'المبادرة'] },
-  partners: { number: '03', title: 'تقييم الشركاء', shortTitle: 'الشركاء', description: 'قياس قيمة الشراكة وجودة التعاون والالتزام والأهداف والنتائج المشتركة.', dimensions: ['جودة التعاون', 'الالتزام', 'القيمة المضافة', 'الأثر المشترك'] }
+  partners: { number: '03', title: 'تقييم الشركاء', shortTitle: 'الشركاء', description: 'قياس قيمة الشراكة وجودة التعاون والالتزام والأهداف والنتائج المشتركة.', dimensions: ['جودة التعاون', 'الالتزام', 'القيمة المضافة', 'الأثر المشترك'] },
+  general: { number: '04', title: 'التقييمات العامة', shortTitle: 'التقييمات العامة', description: 'متابعة الاستبيانات العامة التي لا تندرج تحت اللقاءات أو الفرق أو الشراكات.', dimensions: ['الرضا العام', 'جودة التجربة', 'الاقتراحات', 'فرص التحسين'] }
 }
 
 function AtharCategoryCard({ item, count, replies }) {
@@ -203,7 +204,7 @@ export function ImpactCategoryDashboard({ category }) {
   const surveyIds = new Set(surveys.map(item => item.id))
   const responses = data.responses.filter(item => surveyIds.has(item.survey_id))
   const questionIds = new Set(data.questions.filter(item => surveyIds.has(item.survey_id) && item.question_type === 'rating').map(item => item.id))
-  const ratings = responses.flatMap(row => Object.entries(row.answers || {}).filter(([id, value]) => questionIds.has(id) && Number.isFinite(Number(value))).map(([id, value]) => ({ id, value: Number(value) })))
+  const ratings = responses.flatMap(row => Object.entries(row.answers || {}).filter(([id, value]) => questionIds.has(id) && Number.isFinite(Number(value)) && Number(value) >= 1 && Number(value) <= 5).map(([id, value]) => ({ id, value: Number(value) })))
   const average = ratings.length ? (ratings.reduce((sum, item) => sum + item.value, 0) / ratings.length).toFixed(1) : '0.0'
   const active = surveys.filter(item => item.status === 'published').length
   const monthly = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5-index)); return { key: date.getFullYear() + '-' + date.getMonth(), label: date.toLocaleDateString('ar-SA', { month: 'short' }), total: responses.filter(row => { const d = new Date(row.submitted_at); return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() }).length } })
