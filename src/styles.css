@@ -434,3 +434,26 @@
 .athar-success-mark{border-color:rgba(119,199,158,.5);color:#8ed8b5}
 @media(max-width:850px){.athar-kpi-grid{grid-template-columns:repeat(2,1fr)}.athar-sustainability-grid{grid-template-columns:repeat(3,1fr)}.athar-dashboard-hero{grid-template-columns:1fr}.athar-dashboard-mark{width:160px;height:160px;min-height:160px}.athar-dashboard-mark>span{font-size:35px}.athar-analytics-grid,.athar-survey-layout{grid-template-columns:1fr}}
 @media(max-width:560px){.athar-dashboard-hero{padding:25px 20px}.athar-kpi-grid{gap:8px}.athar-kpi{padding:14px;min-height:120px}.athar-kpi>strong{font-size:24px}.athar-dashboard-section-head,.athar-subpage-heading,.athar-next-step{align-items:flex-start;flex-direction:column}.athar-sustainability-grid{grid-template-columns:1fr 1fr}.athar-next-step{padding:20px}.athar-panel{padding:16px}.athar-public-card{padding:22px 17px}.athar-rating-options{gap:5px}.athar-rating-options button{min-height:49px}.athar-survey-builder{padding:16px}.athar-public-progress{font-size:9px}}
+
+
+/* Athar: dedicated indicator dashboards, preserving the existing Nahj palette */
+.athar-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 34px}
+.athar-category-card{display:flex;flex-direction:column;min-height:245px;padding:22px;border:1px solid var(--nahj-line);border-radius:17px;background:linear-gradient(145deg,#1a3040,#10212e);color:inherit;text-decoration:none;transition:transform .2s,border-color .2s}
+.athar-category-card:hover{transform:translateY(-3px);border-color:rgba(217,189,125,.55)}
+.athar-category-card-top{display:flex;justify-content:space-between;align-items:center;color:#d9bd7d;font-size:9px;letter-spacing:1px}
+.athar-category-card-top b{font-size:23px;font-weight:400}
+.athar-category-card h2{font-size:20px;margin:23px 0 7px;color:#f0ede7}
+.athar-category-card p{font-size:11px;line-height:2;color:#aebdc5;margin:0 0 18px}
+.athar-category-card-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding:12px 0;border-top:1px solid rgba(255,255,255,.09);color:#9eacb6;font-size:9px}
+.athar-category-card>strong{display:flex;justify-content:space-between;color:#d9bf83;font-size:11px;padding-top:9px}
+.athar-overview-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 35px}
+.athar-overview-strip>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border:1px solid var(--nahj-line);border-radius:12px;background:rgba(20,40,56,.65)}
+.athar-overview-strip small{font-size:10px;color:#aebbc3}.athar-overview-strip strong{font-size:22px;color:#e1c98e}
+.athar-category-hero{margin-bottom:22px}
+.athar-indicator-list{display:grid;gap:10px}
+.athar-indicator-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 20px;align-items:center;padding:17px 19px;border:1px solid var(--nahj-line);border-radius:13px;background:linear-gradient(145deg,#192f40,#10212e)}
+.athar-indicator-row>div:first-child{min-width:0}.athar-indicator-row>div:first-child>small{font-size:9px;color:#d9bd7d}.athar-indicator-row h3{font-size:13px;margin:5px 0}.athar-indicator-row>div:first-child>span{font-size:9px;color:#91a2ad}
+.athar-indicator-row>strong{font-size:23px;color:#dfc88e;white-space:nowrap}.athar-indicator-row>strong small{font-size:10px;color:#91a2ad;font-weight:400}
+.athar-indicator-track{grid-column:1/-1;height:6px;border-radius:10px;background:rgba(255,255,255,.07);overflow:hidden}.athar-indicator-track i{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,#8d7044,#e1ca91)}
+@media(max-width:850px){.athar-category-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.athar-category-grid,.athar-overview-strip{grid-template-columns:1fr}.athar-category-card{min-height:210px}.athar-indicator-row{gap:8px 12px;padding:14px}}
