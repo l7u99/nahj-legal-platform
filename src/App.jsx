@@ -24,7 +24,6 @@ function Header() {
         <Link to="/">الرئيسية</Link>
         <Link to="/competitions">المسابقات</Link>
         <Link to="/impact">قياس الأثر</Link>
-        <Link to="/impact/meetings">المساعد الذكي</Link>
         <Link to="/admin">الإدارة</Link>
       </nav>
     </header>
@@ -126,10 +125,6 @@ function Home() {
             <Link className="home-portal-card" to="/impact"><span>01 · اللقاءات</span><strong>إحصائيات تقييم اللقاءات</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
             <Link className="home-portal-card" to="/impact"><span>02 · الشراكات</span><strong>إحصائيات تقييم الشركاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
             <Link className="home-portal-card" to="/impact"><span>03 · الفرق</span><strong>إحصائيات تقييم الفرق والأعضاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
-          </div>
-          <div className="home-ai-callout">
-            <div><span className="eyebrow">POWERED BY OPENAI</span><h3>مساعد أثَر الذكي</h3><p>مساعد تفاعلي يحاورك خطوة بخطوة، وينظم البيانات ويُعدّ تقريرًا أوليًا عن الأثر وفرص التحسين.</p></div>
-            <Link to="/impact/meetings">افتح المساعد الذكي ←</Link>
           </div>
         </section>
         <section className="home-bottom-note">
