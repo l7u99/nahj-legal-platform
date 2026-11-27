@@ -182,15 +182,16 @@ export default function Advocacy() {
     }
 
     const finalText = finalArgument.trim()
-    const wordCount = finalText.split(/\s+/).filter(Boolean).length
+    const characterCount = Array.from(finalText).length
     const hasLetter = /\p{L}/u.test(finalText)
 
-    if (finalText.length < 200) {
+    if (characterCount < 200) {
       setError('يجب أن تحتوي المرافعة على 200 حرف على الأقل.')
       return
     }
 
-    if (characterCount > 5000) {\n      setError('الحد الأعلى للمرافعة هو 5,000 حرف.')
+    if (characterCount > 5000) {
+      setError('الحد الأعلى للمرافعة هو 5,000 حرف.')
       return
     }
 
