@@ -28,12 +28,58 @@ function useImpactAccess() {
 }
 
 function ImpactAccessNotice({ loading }) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  async function login(event) {
+    event.preventDefault()
+    if (submitting || !username.trim() || !password) return
+    setSubmitting(true)
+    setError('')
+    try {
+      const { data, error: loginError } = await db.functions.invoke('admin-login', {
+        body: { username: username.trim(), password }
+      })
+      if (loginError || !data?.access_token || !data?.refresh_token) {
+        throw new Error('بيانات الدخول غير صحيحة أو أن الحساب غير معتمد.')
+      }
+      const { error: sessionError } = await db.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token
+      })
+      if (sessionError) throw new Error('تعذر إنشاء جلسة الدخول. حاولي مرة أخرى.')
+    } catch (err) {
+      setError(err.message || 'تعذر تسجيل الدخول. حاولي مرة أخرى.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <main className="impact-page">
       <div className="impact-chat-card center">
-        <h1>{loading ? 'جارٍ التحقق من صلاحية الدخول…' : 'هذه المنظومة للأعضاء المعتمدين فقط'}</h1>
-        <p>{loading ? 'لحظة من فضلك.' : 'يلزم تسجيل الدخول بحساب عضو معتمد من إدارة نهج القانوني للوصول إلى بوابات أثَر والمساعد الذكي.'}</p>
-        {!loading && <Link className="btn" to="/admin">تسجيل الدخول للأعضاء ←</Link>}
+        <span className="eyebrow">NAHJ · MEMBERS ACCESS</span>
+        <h1>{loading ? 'جارٍ التحقق من صلاحية الدخول…' : 'دخول منظومة نهج'}</h1>
+        <p>{loading ? 'لحظة من فضلك.' : 'استخدمي اسم المستخدم وكلمة المرور نفسيهما المستخدمين لدخول لوحة الإدارة. الدخول متاح للأعضاء المعتمدين فقط.'}</p>
+        {!loading && (
+          <form className="form impact-member-login" onSubmit={login}>
+            <label>
+              اسم المستخدم
+              <input value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" required />
+            </label>
+            <label>
+              كلمة المرور
+              <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" required />
+            </label>
+            {error && <div className="impact-error" role="alert">{error}</div>}
+            <button className="btn" type="submit" disabled={submitting || !username.trim() || !password}>
+              {submitting ? 'جارٍ تسجيل الدخول…' : 'دخول المنظومة ←'}
+            </button>
+          </form>
+        )}
+        <p className="muted">تُستخدم بيانات دخول الإدارة نفسها، ولا يلزم إنشاء حساب منفصل.</p>
       </div>
     </main>
   )
