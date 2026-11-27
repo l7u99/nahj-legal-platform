@@ -483,12 +483,35 @@ export default function Advocacy() {
               <p>
                 <strong>درجة المراحل الموضوعية:</strong> {result.objective_score ?? 0} / 15
               </p>
-              <p>
-                <strong>حالة المرافعة:</strong> بانتظار المراجعة والتدقيق
-              </p>
-              <p>
-                <strong>الدرجة النهائية:</strong> لم تُعتمد بعد
-              </p>
+              {result.evaluation_status === 'evaluated' && result.ai_feedback ? (
+                <div className="advocacy-ai-result">
+                  <div className="advocacy-ai-score"><small>نتيجة التقييم الآلي الأولي</small><strong>{Number(result.ai_score ?? result.total_score ?? 0).toLocaleString('ar-SA')} / 100</strong></div>
+                  <p><strong>الملخص:</strong> {result.ai_feedback.summary}</p>
+                  <h3>تفصيل المعايير</h3>
+                  {(result.ai_feedback.criteria || []).map((item, index) => (
+                    <article className="review" key={index}>
+                      <b>{item.name}</b>
+                      <strong>{item.score} / 20</strong>
+                      <p>{item.comment}</p>
+                    </article>
+                  ))}
+                  <h3>نقاط القوة</h3>
+                  <ul>{(result.ai_feedback.strengths || []).map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  <h3>فرص التحسين</h3>
+                  <ul>{(result.ai_feedback.improvements || []).map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  {(result.ai_feedback.legal_reference_warnings || []).length > 0 && <>
+                    <h3>إحالات تحتاج إلى تحقق</h3>
+                    <ul>{result.ai_feedback.legal_reference_warnings.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  </>}
+                  <p className="muted">{result.ai_feedback.disclaimer || 'التقييم آلي أولي ويخضع للمراجعة البشرية قبل اعتماد النتائج.'}</p>
+                </div>
+              ) : (
+                <>
+                  <p><strong>حالة المرافعة:</strong> بانتظار التقييم الآلي</p>
+                  <p><strong>الدرجة:</strong> ستظهر بعد اكتمال التقييم.</p>
+                  {result.evaluation_pending_reason && <p className="muted">{result.evaluation_pending_reason}</p>}
+                </>
+              )}
             </div>
 
             <p>رقم المشاركة: {result.submission_id}</p>
