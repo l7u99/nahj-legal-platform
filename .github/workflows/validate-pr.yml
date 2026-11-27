@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [safe/advocacy-submission-audit]
+    branches: [safe/advocacy-submission-audit, feature/athar-identity-dashboard]
   workflow_dispatch:
 
 permissions:
