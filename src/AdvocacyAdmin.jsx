@@ -343,8 +343,8 @@ export default function AdvocacyAdmin() {
           <details><summary>عرض تفاصيل المشاركة</summary>
             <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
             <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
-            <p>الدرجة الموضوعية: {row.objective_score} / 15 · درجة المرافعة: {row.ai_score ?? 'لم تُقيّم'} / 10</p>
-            <p>ملاحظات التقييم: {row.ai_feedback ? JSON.stringify(row.ai_feedback) : 'لا توجد'}</p>
+            <p>الدرجة الموضوعية: {row.objective_score} / 15 · درجة التقييم الآلي: {row.ai_score ?? 'بانتظار التقييم'} / 100</p>
+            <p>ملخص التقييم: {row.ai_feedback?.summary || 'لم يكتمل التقييم بعد'}</p>
           </details>
         </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
       </section>
