@@ -19,7 +19,7 @@ async function buildSurveyContext(supabase: ReturnType<typeof createClient>, por
     .select("id,title,status,category,created_at")
     .eq("category", portal)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(50);
   if (surveyError) throw new Error("Unable to load impact surveys");
 
   const surveyIds = (surveys || []).map((item: any) => item.id);
@@ -43,7 +43,7 @@ async function buildSurveyContext(supabase: ReturnType<typeof createClient>, por
       .select("id,survey_id,answers,submitted_at")
       .in("survey_id", surveyIds)
       .order("submitted_at", { ascending: false })
-      .limit(5000),
+      .limit(1000),
   ]);
   if (questionResult.error || responseResult.error) {
     throw new Error("Unable to load impact survey results");
