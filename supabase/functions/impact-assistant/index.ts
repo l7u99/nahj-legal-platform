@@ -32,16 +32,19 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "أرسل إجابتك أولًا." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
 
+    const mode = body?.mode === "report" ? "report" : "chat"
     const model = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini"
+    const reportSystem = `أنت محلل قياس أثر في منظومة نهج. حلل المحادثة كاملة وأنشئ تقريرًا أوليًا باللغة العربية، دون اختراع أي بيانات أو أرقام. استخدم null أو اذكر «غير متوفر» عند نقص البيانات. أعد JSON صالحًا فقط بهذه المفاتيح: title (عنوان مختصر)، executive_summary (ملخص تنفيذي)، context (وصف الحالة)، indicators (مصفوفة عناصر {name, value, interpretation, evidence}), strengths (مصفوفة نصوص)، gaps (مصفوفة نصوص)، recommendations (مصفوفة عناصر {action, priority, rationale}), data_quality (وصف كفاية البيانات)، limitations (مصفوفة نصوص)، follow_up (مصفوفة نصوص). لا تمنح تصنيف نجاح/فشل قطعيًا، ولا تعتبر المقترحات معايير معتمدة. لا تتضمن بيانات شخصية. مجال التقرير: ${portal}. توجيهات المجال: ${portalGuidance[portal]}`
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        temperature: 0.3,
-        max_tokens: 700,
+        temperature: mode === "report" ? 0.1 : 0.3,
+        max_tokens: mode === "report" ? 1100 : 700,
+        ...(mode === "report" ? { response_format: { type: "json_object" } } : {}),
         messages: [
-          { role: "system", content: `أنت «مساعد نهج» ضمن منظومة قياس الأثر والاستدامة. تحدث بالعربية الواضحة وبأسلوب مهني ودود. لا تقدم ادعاءات أو أرقامًا غير موجودة في مدخلات المستخدم. اطرح سؤالًا واحدًا واضحًا في كل رد حتى تتضح الحالة. لا تطلب بيانات شخصية أو سرية. عند اكتمال المعلومات قدّم قراءة أولية منظمة واذكر بوضوح أي افتراضات أو بيانات ناقصة. هذه مخرجات مساعدة وليست اعتمادًا رسميًا أو حكمًا نهائيًا. ${portalGuidance[portal]}` },
+          { role: "system", content: mode === "report" ? reportSystem : `أنت «مساعد نهج» ضمن منظومة قياس الأثر والاستدامة. تحدث بالعربية الواضحة وبأسلوب مهني ودود. لا تقدم ادعاءات أو أرقامًا غير موجودة في مدخلات المستخدم. اطرح سؤالًا واحدًا واضحًا في كل رد حتى تتضح الحالة. لا تطلب بيانات شخصية أو سرية. عند اكتمال المعلومات قدّم قراءة أولية منظمة واذكر بوضوح أي افتراضات أو بيانات ناقصة. هذه مخرجات مساعدة وليست اعتمادًا رسميًا أو حكمًا نهائيًا. ${portalGuidance[portal]}` },
           ...safeMessages
         ]
       })
@@ -51,9 +54,17 @@ serve(async (req) => {
       console.error("OpenAI request failed", response.status, result?.error?.type || "unknown")
       return new Response(JSON.stringify({ error: "تعذر إكمال طلب المساعد حاليًا. حاول بعد قليل." }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
-    const reply = result?.choices?.[0]?.message?.content
-    if (typeof reply !== "string" || !reply.trim()) throw new Error("Empty assistant response")
-    return new Response(JSON.stringify({ reply: reply.trim() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } })
+    const content = result?.choices?.[0]?.message?.content
+    if (typeof content !== "string" || !content.trim()) throw new Error("Empty assistant response")
+    if (mode === "report") {
+      const report = JSON.parse(content)
+      if (typeof report.title !== "string" || typeof report.executive_summary !== "string" ||
+          !Array.isArray(report.indicators) || !Array.isArray(report.recommendations)) {
+        throw new Error("Invalid report structure")
+      }
+      return new Response(JSON.stringify({ report }), { headers: { ...corsHeaders, "Content-Type": "application/json" } })
+    }
+    return new Response(JSON.stringify({ reply: content.trim() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } })
   } catch (error) {
     console.error("impact-assistant error", error)
     return new Response(JSON.stringify({ error: "حدث خطأ غير متوقع أثناء معالجة الطلب." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } })
