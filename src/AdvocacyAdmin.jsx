@@ -308,8 +308,8 @@ export default function AdvocacyAdmin() {
         <div className="cols">
           <div className="mini"><b>إجمالي المشاركات</b><h2>{allSubmissions.length}</h2></div>
           <div className="mini"><b>بانتظار المراجعة</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required'].includes(row.evaluation_status) || (row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined)).length}</h2></div>
-          <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined).length}</h2></div>
+          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['reviewed', 'approved'].includes(row.evaluation_status)).length}</h2></div>
+          <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
         </div>
         <p className="muted">إحصائيات جميع مسابقات المرافعة فقط، مستقلة عن مسابقة الأسئلة الأسبوعية.</p>
       </section>
@@ -339,11 +339,11 @@ export default function AdvocacyAdmin() {
         <p>سجل مستقل يعرض إجابات كل متسابق ومرافعته الختامية.</p>
         {allSubmissions.length ? allSubmissions.map(row => <article className="review" key={row.id}>
           <b>{row.full_name} · {cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'}</b>
-          <p>تاريخ الإرسال: {dateLabel(row.submitted_at)} · الحالة: {row.evaluation_status === 'approved' && row.ai_score == null ? 'اعتماد قديم غير متحقق — يحتاج تدقيقًا' : row.evaluation_status} · الدرجة: {row.total_score ?? 'بانتظار المراجعة'}</p>
+          <p>تاريخ الإرسال: {dateLabel(row.submitted_at)} · الحالة: {row.evaluation_status} · الدرجة الموضوعية: {row.objective_score ?? 0} / 15</p>
           <details><summary>عرض تفاصيل المشاركة</summary>
             <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
             <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
-            <p>الدرجة الموضوعية: {row.objective_score} / 15 · درجة التقييم الآلي: {row.ai_score ?? 'بانتظار التقييم'} / 100</p>
+            <p>الدرجة الموضوعية: {row.objective_score} / 15 · المرافعة: بانتظار التدقيق البشري</p>
             <p>ملخص التقييم: {row.ai_feedback?.summary || 'لم يكتمل التقييم بعد'}</p>
           </details>
         </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
