@@ -254,3 +254,123 @@ export function ImpactPortal() {
     </main>
   )
 }
+
+
+export function ImpactAdmin() {
+  const [session, setSession] = useState(null)
+  const [reports, setReports] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    if (!db) return
+    db.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: { subscription } } = db.auth.onAuthStateChange((_event, current) => setSession(current))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function loadReports() {
+    setLoading(true)
+    setError('')
+    const { data, error: loadError } = await db.from('impact_assessments')
+      .select('id,portal,title,report,status,created_at,updated_at')
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (loadError) {
+      setError('تعذر تحميل التقارير. تأكدي من تطبيق ترحيل قاعدة البيانات وأن حسابك مسؤول نشط.')
+      setReports([])
+    } else {
+      setReports(data || [])
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (session) loadReports()
+  }, [session])
+
+  async function changeStatus(row, status) {
+    setError('')
+    setNotice('')
+    const { error: updateError } = await db.from('impact_assessments')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', row.id)
+    if (updateError) {
+      setError('تعذر تحديث حالة التقرير.')
+      return
+    }
+    setNotice('تم تحديث حالة التقرير.')
+    if (selected?.id === row.id) setSelected({ ...selected, status })
+    await loadReports()
+  }
+
+  const labels = { meetings: 'تقييم اللقاءات', partners: 'تقييم الشركاء', teams: 'تقييم الفرق والأعضاء' }
+  const visible = reports.filter(row => filter === 'all' || row.portal === filter)
+  const counts = {
+    total: reports.length,
+    draft: reports.filter(row => row.status === 'draft').length,
+    reviewed: reports.filter(row => row.status === 'reviewed').length,
+    archived: reports.filter(row => row.status === 'archived').length
+  }
+
+  if (!session) return (
+    <main className="impact-page">
+      <div className="impact-chat-card center"><h1>دخول المسؤولين مطلوب</h1><p>سجلات قياس الأثر مخصصة للمسؤولين النشطين فقط.</p><Link className="btn" to="/admin">الانتقال إلى تسجيل الدخول</Link></div>
+    </main>
+  )
+
+  return (
+    <main className="impact-page">
+      <div className="impact-breadcrumb"><Link to="/">الرئيسية</Link><span>/</span><Link to="/admin">لوحة الإدارة</Link><span>/</span><b>تقارير قياس الأثر</b></div>
+      <section className="impact-portal-heading">
+        <span className="eyebrow">NAHJ · IMPACT ADMINISTRATION</span>
+        <h1>سجل تقارير الأثر</h1>
+        <p>متابعة التقارير المحفوظة ومراجعتها وأرشفتها.</p>
+      </section>
+      <div className="impact-admin-stats">
+        <div><strong>{counts.total}</strong><span>إجمالي التقارير</span></div>
+        <div><strong>{counts.draft}</strong><span>مسودات</span></div>
+        <div><strong>{counts.reviewed}</strong><span>تمت مراجعتها</span></div>
+        <div><strong>{counts.archived}</strong><span>مؤرشفة</span></div>
+      </div>
+      <section className="impact-admin-layout">
+        <div className="impact-admin-list">
+          <div className="impact-admin-toolbar">
+            <select value={filter} onChange={event => setFilter(event.target.value)}>
+              <option value="all">كل البوابات</option><option value="meetings">اللقاءات</option><option value="partners">الشركاء</option><option value="teams">الفرق والأعضاء</option>
+            </select>
+            <button type="button" className="impact-outline-btn" onClick={loadReports} disabled={loading}>{loading ? 'جارٍ التحديث…' : 'تحديث السجل ↻'}</button>
+          </div>
+          {error && <div className="impact-error">{error}</div>}
+          {notice && <div className="impact-success">{notice}</div>}
+          {loading ? <p className="muted">جارٍ تحميل التقارير…</p> : visible.length ? visible.map(row => (
+            <button type="button" className={'impact-report-row ' + (selected?.id === row.id ? 'active' : '')} key={row.id} onClick={() => setSelected(row)}>
+              <span className="eyebrow">{labels[row.portal] || row.portal}</span>
+              <b>{row.title}</b>
+              <small>{new Date(row.created_at).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' })}</small>
+              <em>{row.status === 'reviewed' ? 'تمت المراجعة' : row.status === 'archived' ? 'مؤرشف' : 'مسودة'}</em>
+            </button>
+          )) : <p className="muted">لا توجد تقارير محفوظة في هذا السجل حتى الآن.</p>}
+        </div>
+        <div className="impact-admin-detail">
+          {selected ? <>
+            <div className="impact-report-head"><span className="eyebrow">{labels[selected.portal]}</span><h2>{selected.title}</h2><p>{selected.report?.executive_summary}</p></div>
+            <div className="impact-report-section"><h3>المؤشرات</h3>{(selected.report?.indicators || []).map((item,index)=><article className="impact-indicator" key={index}><b>{item.name}</b><strong>{item.value ?? 'غير متوفر'}</strong><p>{item.interpretation}</p></article>)}</div>
+            <div className="impact-report-section"><h3>التوصيات</h3><ul>{(selected.report?.recommendations || []).map((item,index)=><li key={index}><b>{item.action}</b> — {item.rationale}</li>)}</ul></div>
+            <div className="impact-report-section"><h3>الفجوات</h3><ul>{(selected.report?.gaps || []).map((item,index)=><li key={index}>{item}</li>)}</ul></div>
+            <div className="impact-admin-actions">
+              {selected.status !== 'reviewed' && <button type="button" className="impact-primary-btn" onClick={() => changeStatus(selected,'reviewed')}>تحديد كمراجع</button>}
+              {selected.status !== 'archived' && <button type="button" className="impact-outline-btn" onClick={() => changeStatus(selected,'archived')}>أرشفة التقرير</button>}
+              {selected.status !== 'draft' && <button type="button" className="impact-outline-btn" onClick={() => changeStatus(selected,'draft')}>إعادته لمسودة</button>}
+              <button type="button" className="impact-outline-btn" onClick={() => window.print()}>طباعة التقرير</button>
+            </div>
+          </> : <div className="impact-admin-empty"><span>✧</span><h2>اختاري تقريرًا</h2><p>ستظهر تفاصيل التقرير ومؤشراته وتوصياته هنا.</p></div>}
+        </div>
+      </section>
+      <div className="impact-back"><Link to="/admin">← العودة إلى لوحة الإدارة</Link></div>
+    </main>
+  )
+}
