@@ -40,16 +40,31 @@ Deno.serve(async (req) => {
   let failed = false
 
   try {
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "")
+    if (!token) return json({ error: "يلزم تسجيل دخول المسؤول لاستخدام مساعد أثَر." }, 401)
+
+    const url = Deno.env.get("SUPABASE_URL")
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")
+    const serviceKey = getServiceKey()
     const apiKey = Deno.env.get("OPENAI_API_KEY")
     const monthlyLimit = Number(Deno.env.get("IMPACT_AI_MONTHLY_LIMIT") || 0)
-    const url = Deno.env.get("SUPABASE_URL")
-    const serviceKey = getServiceKey()
-    if (!apiKey || !url || !serviceKey) return json({ error: "خدمة المساعد غير مهيأة بعد." }, 503)
+    if (!url || !anonKey || !serviceKey || !apiKey) return json({ error: "خدمة المساعد غير مهيأة بعد." }, 503)
     if (!Number.isInteger(monthlyLimit) || monthlyLimit < 1) {
       return json({ error: "لم يتم ضبط سقف الاستخدام الشهري للمساعد." }, 503)
     }
 
+    const userClient = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } })
+    const { data: auth, error: authError } = await userClient.auth.getUser(token)
+    if (authError || !auth.user) return json({ error: "جلسة غير صالحة. سجّل الدخول مجددًا." }, 401)
+
     supabase = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+    const { data: adminRow, error: adminError } = await supabase
+      .from("admin_users")
+      .select("active")
+      .eq("user_id", auth.user.id)
+      .maybeSingle()
+    if (adminError || !adminRow?.active) return json({ error: "هذه البوابة متاحة للمسؤولين النشطين فقط." }, 403)
+
     const body = await req.json()
     const portal = body?.portal
     const mode = body?.mode === "report" ? "report" : "chat"
