@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const portal = body?.portal
     const mode = body?.mode === "report" ? "report" : "chat"
     const messages = body?.messages
-    if (!portalGuidance[portal] || !Array.isArray(messages) || messages.length < 1 || messages.length > 16) {
+    if (!portalGuidance[portal] || !Array.isArray(messages) || messages.length < 1 || messages.length > 40) {
       return json({ error: "بيانات الطلب غير صالحة." }, 400)
     }
 
