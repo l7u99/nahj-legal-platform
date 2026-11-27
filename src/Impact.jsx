@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { db } from './lib'
 
 function useImpactAccess() {
@@ -176,9 +176,8 @@ export function ImpactHome() {
   )
 }
 
-export function ImpactPortal() {
+export function ImpactPortal({ portal }) {
   const access = useImpactAccess()
-  const { portal } = useParams()
   const info = portalInfo[portal]
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
