@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db } from './lib'
 
@@ -97,6 +97,18 @@ export function ImpactPortal() {
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [session, setSession] = useState(null)
+  const [report, setReport] = useState(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
+  const [savingReport, setSavingReport] = useState(false)
+  const [savedReportId, setSavedReportId] = useState(null)
+  const [reportNotice, setReportNotice] = useState('')
+  useEffect(() => {
+    if (!db) return
+    db.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: { subscription } } = db.auth.onAuthStateChange((_event, current) => setSession(current))
+    return () => subscription.unsubscribe()
+  }, [])
   const conversation = useMemo(() => messages.length ? messages : [
     { role: 'assistant', content: `مرحبًا بك في ${info?.title || 'بوابة قياس الأثر'}. سأرافقك خطوة بخطوة لفهم الحالة وقياسها. لنبدأ: ${info?.starters?.[0] || 'ما المجال الذي ترغب في قياس أثره؟'}` }
   ], [messages, info])
@@ -126,10 +138,54 @@ export function ImpactPortal() {
     }
   }
 
+  async function generateReport() {
+    if (generatingReport || messages.filter(message => message.role === 'user').length < 2) return
+    setGeneratingReport(true)
+    setError('')
+    setReportNotice('')
+    setReport(null)
+    setSavedReportId(null)
+    try {
+      const { data, error: invokeError } = await db.functions.invoke('impact-assistant', {
+        body: { portal, mode: 'report', messages }
+      })
+      if (invokeError || !data?.report) throw new Error(data?.error || invokeError?.message || 'تعذر إنشاء التقرير.')
+      setReport(data.report)
+    } catch (err) {
+      setError(err.message || 'تعذر إنشاء التقرير.')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+
+  async function saveReport() {
+    if (!session?.user?.id || !report || savingReport) return
+    setSavingReport(true)
+    setError('')
+    setReportNotice('')
+    const { data, error: saveError } = await db.from('impact_assessments').insert({
+      portal,
+      title: String(report.title || info.title).slice(0, 180),
+      report,
+      created_by: session.user.id,
+      status: 'draft'
+    }).select('id').single()
+    if (saveError) {
+      setError('تعذر حفظ التقرير. تأكدي من تطبيق ترحيل قاعدة البيانات وصلاحية المسؤول.')
+    } else {
+      setSavedReportId(data.id)
+      setReportNotice('تم حفظ التقرير في سجلات منظومة نهج.')
+    }
+    setSavingReport(false)
+  }
+
   function resetConversation() {
     setMessages([])
     setDraft('')
     setError('')
+    setReport(null)
+    setSavedReportId(null)
+    setReportNotice('')
   }
 
   return (
@@ -163,6 +219,35 @@ export function ImpactPortal() {
             <button type="submit" disabled={busy || !draft.trim()}>{busy ? '...' : 'إرسال ←'}</button>
           </form>
           <div className="chat-foot">تُرسل الرسالة عند الضغط على «إرسال» فقط · راجع المخرجات قبل اعتماد أي قرار</div>
+          <div className="impact-report-actions">
+            <button type="button" className="impact-outline-btn" onClick={generateReport} disabled={generatingReport || messages.filter(message => message.role === 'user').length < 2}>
+              {generatingReport ? 'جارٍ إعداد التقرير…' : 'إعداد تقرير الأثر'}
+            </button>
+            <small>يتاح بعد إدخال إجابتين على الأقل، ويُنشأ عند الطلب فقط.</small>
+          </div>
+          {report && <section className="impact-report" id="impact-report">
+            <div className="impact-report-head"><span className="eyebrow">NAHJ · IMPACT REPORT</span><h2>{report.title}</h2><p>{report.executive_summary}</p></div>
+            <div className="impact-report-section"><h3>سياق التقييم</h3><p>{report.context || 'لم تتوفر تفاصيل كافية.'}</p></div>
+            <div className="impact-report-section"><h3>المؤشرات والقراءة</h3>
+              {report.indicators?.length ? report.indicators.map((item,index)=><article className="impact-indicator" key={index}><b>{item.name}</b><strong>{item.value ?? 'غير متوفر'}</strong><p>{item.interpretation}</p><small>الدليل: {item.evidence || 'لم يذكر'}</small></article>) : <p>لم تتوفر مؤشرات كافية.</p>}
+            </div>
+            <div className="impact-report-columns">
+              <div className="impact-report-section"><h3>نقاط القوة</h3><ul>{(report.strengths || []).map((item,index)=><li key={index}>{item}</li>)}</ul></div>
+              <div className="impact-report-section"><h3>الفجوات</h3><ul>{(report.gaps || []).map((item,index)=><li key={index}>{item}</li>)}</ul></div>
+            </div>
+            <div className="impact-report-section"><h3>التوصيات</h3>
+              {(report.recommendations || []).map((item,index)=><article className="impact-recommendation" key={index}><b>{item.action}</b><span>{item.priority || 'أولوية غير محددة'}</span><p>{item.rationale}</p></article>)}
+            </div>
+            <div className="impact-report-section"><h3>جودة البيانات وحدود القراءة</h3><p>{report.data_quality || 'غير محدد'}</p><ul>{(report.limitations || []).map((item,index)=><li key={index}>{item}</li>)}</ul></div>
+            <div className="impact-report-section"><h3>المتابعة المقترحة</h3><ul>{(report.follow_up || []).map((item,index)=><li key={index}>{item}</li>)}</ul></div>
+            <div className="impact-report-disclaimer">هذا تقرير أولي مساعد، ولا يمثل اعتمادًا رسميًا أو تقييمًا نهائيًا. راجع البيانات والمؤشرات قبل اتخاذ القرارات.</div>
+            <div className="impact-report-actions">
+              {session?.user?.id ? <button type="button" className="impact-primary-btn" onClick={saveReport} disabled={savingReport || !!savedReportId}>{savedReportId ? 'تم حفظ التقرير ✓' : savingReport ? 'جارٍ الحفظ…' : 'حفظ التقرير في سجلات نهج'}</button> : <Link className="impact-outline-btn" to="/admin">دخول المسؤول لحفظ التقرير</Link>}
+              <button type="button" className="impact-outline-btn" onClick={() => window.print()}>طباعة / حفظ PDF</button>
+              {reportNotice && <small className="impact-success">{reportNotice}</small>}
+              {savedReportId && <small>رقم التقرير: {savedReportId}</small>}
+            </div>
+          </section>}
         </div>
       </section>
       <div className="impact-back"><Link to="/impact">← العودة إلى المنظومة</Link></div>
