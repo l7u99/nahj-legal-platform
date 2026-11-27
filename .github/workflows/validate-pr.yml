@@ -41,5 +41,5 @@ jobs:
       - name: Type-check Supabase Edge Functions
         run: |
           deno check --node-modules-dir=none supabase/functions/submit-advocacy/index.ts
-          deno check supabase/functions/impact-assistant/index.ts
-          deno check supabase/functions/admin-ai-usage/index.ts
+          deno check --node-modules-dir=none supabase/functions/impact-assistant/index.ts
+          deno check --node-modules-dir=none supabase/functions/admin-ai-usage/index.ts
