@@ -80,7 +80,7 @@ function Home() {
             <h1>من المعرفة القانونية<br /><em>إلى أثرٍ يُصنع.</em></h1>
             <p>منصة نهج القانوني؛ مساحة للمنافسة والتعلّم، ومنظومة لقياس الأثر والاستدامة وتطوير جودة العمل.</p>
             <div className="home-actions">
-              <Link className="btn" to="/competitions">اكتشف المسابقات ←</Link>
+              <a className="btn" href="#nahj-gateways">استكشف بوابات نهج ↓</a>
             </div>
           </div>
           <div className="home-hero-art" aria-hidden="true">
@@ -88,7 +88,7 @@ function Home() {
             <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
           </div>
         </section>
-        <section className="home-section-head">
+        <section className="home-section-head" id="nahj-gateways">
           <div><span className="eyebrow">EXPLORE NAHJ</span><h2>بوابات نهج</h2></div>
           <p>اختر المسار الذي يناسب هدفك وابدأ تجربتك.</p>
         </section>
@@ -97,12 +97,7 @@ function Home() {
             <div className="gateway-top"><span>01 / COMPETITIONS</span><b>⚖</b></div>
             <h3>بوابة المسابقات</h3>
             <p>تجارب قانونية تفاعلية تختبر المعرفة والتحليل والاستدلال وصياغة المرافعة.</p>
-            <div className="gateway-links">
-              <Link to="/competitions">الدخول إلى المسابقات <span>←</span></Link>
-              {ready && questionSet && <Link to={'/participate/' + questionSet.id}>التحدي الأسبوعي الحالي <span>←</span></Link>}
-              <Link to="/advocacy">مسابقة المرافعة القانونية <span>←</span></Link>
-              <Link to="/archive">أرشيف الأسئلة <span>←</span></Link>
-            </div>
+            <Link className="gateway-enter" to="/competitions">الدخول إلى بوابة المسابقات <span>←</span></Link>
           </article>
           <article className="gateway-card gateway-impact">
             <div className="gateway-top"><span>02 / IMPACT & SUSTAINABILITY</span><b>✧</b></div>
