@@ -82,18 +82,18 @@ Deno.serve(async (req) => {
       return response({ error: "الإجابات غير صالحة" }, 400);
     }
 
-    const wordCount = finalArgument.split(/\s+/u).filter(Boolean).length;
+    const characterCount = Array.from(finalArgument).length;
     const hasLetter = /\p{L}/u.test(finalArgument);
 
-    if (finalArgument.length < 200) {
+    if (characterCount < 200) {
       return response({
         error: "يجب أن تحتوي المرافعة على 200 حرف على الأقل.",
       }, 400);
     }
 
-    if (wordCount > 5000) {
+    if (characterCount > 5000) {
       return response({
-        error: "الحد الأعلى للمرافعة هو 5,000 كلمة.",
+        error: "الحد الأعلى للمرافعة هو 5,000 حرف.",
       }, 400);
     }
 
@@ -321,12 +321,7 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    // Automated scoring is intentionally disabled. Submissions remain pending for human review.
-    const finalEvaluationStatus = "pending";
-    const finalAiScore: number | null = null;
-    const finalTotalScore: number | null = null;
-    const finalAiFeedback: Record<string, unknown> | null = null;
-
+    // Mark the attempt submitted immediately after the durable submission insert.
     const { error: attemptUpdateError } = await supabase
       .from("advocacy_attempts")
       .update({
@@ -339,9 +334,136 @@ Deno.serve(async (req) => {
 
     if (attemptUpdateError) {
       console.error("Attempt update error:", attemptUpdateError);
-      return response({
-        error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
-      }, 500);
+    }
+
+    let evaluationStatus = "pending";
+    let aiScore: number | null = null;
+    let totalScore: number | null = null;
+    let aiFeedback: Record<string, unknown> | null = null;
+    let pendingReason = "تم حفظ المشاركة، والتقييم الآلي بانتظار توفر الخدمة أو مراجعة المسؤول.";
+
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    const monthlyLimit = Number(Deno.env.get("ADVOCACY_AI_MONTHLY_LIMIT") || 100);
+    let quotaReserved = false;
+    let actualInputTokens = 0;
+    let actualOutputTokens = 0;
+    let evaluationFailed = false;
+
+    try {
+      if (!apiKey || !Number.isInteger(monthlyLimit) || monthlyLimit < 1) {
+        throw new Error("Advocacy AI is not configured");
+      }
+
+      const { data: caseRow, error: caseError } = await supabase
+        .from("advocacy_cases")
+        .select("title,description,case_facts")
+        .eq("id", attempt.case_id)
+        .single();
+      if (caseError || !caseRow) throw new Error("Unable to load case context");
+
+      const rubric = [
+        { key: "legal_qualification", label: "سلامة التكييف القانوني" },
+        { key: "facts_analysis", label: "تحليل الوقائع" },
+        { key: "legal_authorities", label: "الاستناد للأنظمة والأسانيد" },
+        { key: "evidence_weight", label: "حجية الأدلة" },
+        { key: "writing_and_argument", label: "قوة الصياغة والترابط والحجج" },
+      ];
+
+      const promptPayload = {
+        case: { title: caseRow.title, description: caseRow.description, facts: caseRow.case_facts },
+        stages: stages.map((stage: any) => ({
+          number: stage.stage_number,
+          title: stage.title,
+          prompt: stage.prompt,
+          answer: answers[stage.id] ?? null,
+        })),
+        final_argument: finalArgument,
+        rubric,
+      };
+
+      const systemPrompt = `أنت مقيّم أكاديمي للمرافعات القانونية في مسابقة تدريبية سعودية. قيّم النص وفق الوقائع والمعلومات المتاحة فقط، ولا تخترع مواد نظامية أو سوابق أو وقائع. إذا ذكر المتسابق مادة أو نظامًا ولم تتوفر وسيلة للتحقق، فاذكر أن المرجع يحتاج تحققًا ولا تجزم بصحته. لا تعتبر النص استشارة قانونية ولا تصدر حكمًا قضائيًا. امنح كل معيار درجة من 0 إلى 2، ومجموعًا من 10 يساوي مجموع درجات المعايير. المعايير: سلامة التكييف القانوني، تحليل الوقائع، الاستناد للأنظمة والأسانيد، حجية الأدلة، قوة الصياغة والترابط والحجج. كن منصفًا ومتدرجًا. أعد JSON صالحًا فقط بهذه المفاتيح: criteria (مصفوفة من خمسة عناصر بالترتيب، كل عنصر يحوي key وscore وreason)، total_score، strengths (مصفوفة نصوص)، weaknesses (مصفوفة نصوص)، potential_errors (مصفوفة نصوص)، improvements (مصفوفة نصوص)، overall_feedback. لا تذكر بيانات شخصية.`;
+
+      const requestBody = JSON.stringify({
+        model: Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini",
+        temperature: 0.1,
+        max_tokens: 1400,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(promptPayload) },
+        ],
+      });
+      const estimatedTokens = Math.ceil(requestBody.length / 4) + 1400;
+      const { data: allowed, error: quotaError } = await supabase.rpc(
+        "reserve_advocacy_ai_evaluation",
+        { p_monthly_limit: monthlyLimit, p_estimated_input_tokens: estimatedTokens },
+      );
+      if (quotaError || allowed !== true) throw new Error("Advocacy AI monthly quota unavailable");
+      quotaReserved = true;
+
+      const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: requestBody,
+      });
+      const aiResult = await aiResponse.json();
+      actualInputTokens = Number(aiResult?.usage?.prompt_tokens || 0);
+      actualOutputTokens = Number(aiResult?.usage?.completion_tokens || 0);
+      if (!aiResponse.ok) throw new Error(`OpenAI evaluation failed: ${aiResponse.status}`);
+
+      const content = aiResult?.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) throw new Error("Empty evaluation");
+      const parsed = JSON.parse(content);
+      if (!Array.isArray(parsed.criteria) || parsed.criteria.length !== 5) throw new Error("Invalid evaluation criteria");
+
+      const normalizedCriteria = rubric.map((item, index) => {
+        const candidate = parsed.criteria[index];
+        if (!candidate || candidate.key !== item.key) throw new Error("Evaluation criteria mismatch");
+        const score = Number(candidate.score);
+        if (!Number.isFinite(score) || score < 0 || score > 2) throw new Error("Invalid criterion score");
+        return { key: item.key, label: item.label, score: Math.round(score * 100) / 100, reason: String(candidate.reason || "").slice(0, 1200) };
+      });
+      aiScore = Math.round(normalizedCriteria.reduce((sum, item) => sum + item.score, 0) * 100) / 100;
+      aiFeedback = {
+        criteria: normalizedCriteria,
+        total_score: aiScore,
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0, 8).map((v: unknown) => String(v).slice(0, 800)) : [],
+        weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses.slice(0, 8).map((v: unknown) => String(v).slice(0, 800)) : [],
+        potential_errors: Array.isArray(parsed.potential_errors) ? parsed.potential_errors.slice(0, 8).map((v: unknown) => String(v).slice(0, 800)) : [],
+        improvements: Array.isArray(parsed.improvements) ? parsed.improvements.slice(0, 8).map((v: unknown) => String(v).slice(0, 800)) : [],
+        overall_feedback: String(parsed.overall_feedback || "").slice(0, 2000),
+        disclaimer: "تقييم تدريبي آلي مساعد، ولا يغني عن المراجعة البشرية أو التحقق من المراجع النظامية.",
+      };
+      totalScore = Math.round((objectiveScore + aiScore) * 100) / 100;
+
+      const { error: evaluationUpdateError } = await supabase
+        .from("advocacy_submissions")
+        .update({
+          ai_score: aiScore,
+          ai_feedback: aiFeedback,
+          total_score: totalScore,
+          evaluation_status: "evaluated",
+          evaluated_at: new Date().toISOString(),
+        })
+        .eq("id", submission.id);
+      if (evaluationUpdateError) throw new Error("Unable to save evaluation");
+      evaluationStatus = "evaluated";
+      pendingReason = "";
+    } catch (evaluationError) {
+      evaluationFailed = true;
+      aiScore = null;
+      totalScore = null;
+      aiFeedback = null;
+      console.error("Advocacy AI evaluation deferred:", evaluationError);
+    } finally {
+      if (quotaReserved) {
+        const { error: usageError } = await supabase.rpc("record_advocacy_ai_usage", {
+          p_actual_input_tokens: actualInputTokens,
+          p_actual_output_tokens: actualOutputTokens,
+          p_failed: evaluationFailed,
+        });
+        if (usageError) console.error("Unable to record advocacy AI usage:", usageError);
+      }
     }
 
     return response({
@@ -349,12 +471,14 @@ Deno.serve(async (req) => {
       status: "submitted",
       submission_id: submission.id,
       objective_score: objectiveScore,
-      ai_score: finalAiScore,
-      ai_feedback: finalAiFeedback,
-      total_score: finalTotalScore,
-      evaluation_status: finalEvaluationStatus,
-      evaluation_pending_reason: "تم حفظ المشاركة، وستُراجع المرافعة بشريًا قبل اعتماد النتائج.",
-      message: "تم استلام المشاركة بنجاح، وستُراجع المرافعة بشريًا.",
+      ai_score: aiScore,
+      ai_feedback: aiFeedback,
+      total_score: totalScore,
+      evaluation_status: evaluationStatus,
+      evaluation_pending_reason: pendingReason,
+      message: evaluationStatus === "evaluated"
+        ? "تم استلام المرافعة وتقييمها آليًا بنجاح."
+        : "تم حفظ المشاركة بنجاح، وسيُستكمل تقييم المرافعة عند توفر الخدمة.",
     });
 
   } catch (error) {

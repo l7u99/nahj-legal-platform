@@ -308,7 +308,7 @@ export default function AdvocacyAdmin() {
         <div className="cols">
           <div className="mini"><b>إجمالي المشاركات</b><h2>{allSubmissions.length}</h2></div>
           <div className="mini"><b>بانتظار المراجعة</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['reviewed', 'approved'].includes(row.evaluation_status)).length}</h2></div>
+          <div className="mini"><b>تمت مراجعتهم</b><h2>{allSubmissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
           <div className="mini"><b>تم اعتماد النتائج</b><h2>{allSubmissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
         </div>
         <p className="muted">إحصائيات جميع مسابقات المرافعة فقط، مستقلة عن مسابقة الأسئلة الأسبوعية.</p>
@@ -316,15 +316,15 @@ export default function AdvocacyAdmin() {
 
       <section className="card">
         <h2>مرشحو المراجعة الأولية</h2>
-        <p>فرز أولي بحسب الدرجة الموضوعية ثم سرعة الإكمال. لا يمثل ترتيبًا نهائيًا أو إعلانًا للفائزين؛ يلزم تدقيق المرافعات واعتماد النتائج يدويًا.</p>
-        {allSubmissions.filter(row => row.evaluation_status === 'pending')
-          .sort((a, b) => Number(b.objective_score || 0) - Number(a.objective_score || 0) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
-          .slice(0, 10).length ? allSubmissions.filter(row => row.evaluation_status === 'pending')
-            .sort((a, b) => Number(b.objective_score || 0) - Number(a.objective_score || 0) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
+        <p>ترتيب استرشادي بحسب درجة المراحل الموضوعية (15) وتقييم المرافعة الآلي (10). لا يمثل إعلانًا نهائيًا؛ تعتمد النتائج بعد المراجعة البشرية.</p>
+        {allSubmissions
+          .sort((a, b) => Number(b.total_score ?? (Number(b.objective_score || 0) + Number(b.ai_score || 0))) - Number(a.total_score ?? (Number(a.objective_score || 0) + Number(a.ai_score || 0))) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
+          .slice(0, 10).length ? allSubmissions
+            .sort((a, b) => Number(b.total_score ?? (Number(b.objective_score || 0) + Number(b.ai_score || 0))) - Number(a.total_score ?? (Number(a.objective_score || 0) + Number(a.ai_score || 0))) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
             .slice(0, 10).map((row, index) => <article className="leader" key={row.id}>
-              <b>#{index + 1} · {row.full_name}</b><span>{row.objective_score ?? 0} / 15</span>
+              <b>#{index + 1} · {row.full_name}</b><span>{row.ai_score == null ? 'بانتظار التقييم' : `${row.ai_score} / 10`}</span>
               <small>{cases.find(item => item.id === row.case_id)?.title || 'مسابقة مرافعة'} · {row.duration_seconds == null ? 'المدة غير متاحة' : 'المدة: ' + Math.floor(row.duration_seconds / 60) + ' دقيقة'}</small>
-            </article>) : <p>لا توجد مشاركات بانتظار المراجعة حاليًا.</p>}
+            </article>) : <p>لا توجد مشاركات مسجلة حاليًا.</p>}
       </section>
 
       <section className="card">
@@ -343,8 +343,26 @@ export default function AdvocacyAdmin() {
           <details><summary>عرض تفاصيل المشاركة</summary>
             <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
             <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
-            <p>الدرجة الموضوعية: {row.objective_score} / 15 · المرافعة: بانتظار التدقيق البشري</p>
-            <p className="muted">لم يُفعّل التقييم الآلي؛ المرافعة بانتظار التدقيق البشري.</p>
+            <p>درجة المراحل الموضوعية: {row.objective_score ?? 0} / 15</p>
+            <p>تقييم المرافعة: {row.ai_score == null ? 'بانتظار التقييم' : `${row.ai_score} / 10`}</p>
+            {row.ai_feedback && (
+              <div className="note">
+                <h4>تفصيل تقييم الذكاء الاصطناعي</h4>
+                {Array.isArray(row.ai_feedback.criteria) && row.ai_feedback.criteria.map(item => (
+                  <p key={item.key}><strong>{item.label}:</strong> {item.score} / 2 — {item.reason}</p>
+                ))}
+                {[
+                  ['strengths', 'نقاط القوة'],
+                  ['weaknesses', 'نقاط الضعف'],
+                  ['potential_errors', 'الأخطاء المحتملة'],
+                  ['improvements', 'اقتراحات التحسين'],
+                ].map(([field, label]) => Array.isArray(row.ai_feedback[field]) && row.ai_feedback[field].length > 0 && (
+                  <div key={field}><strong>{label}</strong><ul>{row.ai_feedback[field].map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                ))}
+                <p className="muted">{row.ai_feedback.disclaimer}</p>
+              </div>
+            )}
+            {row.evaluation_status === 'pending' && <p className="muted">تم حفظ المشاركة، والتقييم بانتظار توفر الخدمة.</p>}
           </details>
         </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
       </section>

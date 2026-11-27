@@ -4,7 +4,7 @@ import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
 import AdvocacyAdmin from './AdvocacyAdmin'
-import { ImpactHome, ImpactPortal, ImpactAdmin } from './Impact'
+import { ImpactHome, ImpactCategoryDashboard, ImpactPortal, ImpactAdmin, ImpactSurveyAdmin, ImpactSurveyPublic } from './Impact'
 
 function Header() {
   return (
@@ -23,9 +23,6 @@ function Header() {
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/competitions">المسابقات</Link>
-        <Link to="/impact">قياس الأثر</Link>
-        <Link to="/impact/meetings">المساعد الذكي</Link>
-        <Link to="/admin">الإدارة</Link>
       </nav>
     </header>
   )
@@ -67,13 +64,6 @@ function formatDate(value) {
 }
 
 function Home() {
-  const [questionSet, setQuestionSet] = useState(null)
-  useEffect(() => {
-    if (!ready) return
-    db.from('question_sets').select('id,title,description').eq('status', 'published')
-      .order('created_at', { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => setQuestionSet(data))
-  }, [])
   return (
     <Shell>
       <main className="home-v2">
@@ -83,8 +73,7 @@ function Home() {
             <h1>من المعرفة القانونية<br /><em>إلى أثرٍ يُصنع.</em></h1>
             <p>منصة نهج القانوني؛ مساحة للمنافسة والتعلّم، ومنظومة لقياس الأثر والاستدامة وتطوير جودة العمل.</p>
             <div className="home-actions">
-              <Link className="btn" to="/competitions">اكتشف المسابقات ←</Link>
-              <Link className="home-text-link" to="/impact">استكشف منظومة الأثر</Link>
+              <a className="btn" href="#nahj-gateways">استكشف بوابات نهج ↓</a>
             </div>
           </div>
           <div className="home-hero-art" aria-hidden="true">
@@ -92,7 +81,7 @@ function Home() {
             <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
           </div>
         </section>
-        <section className="home-section-head">
+        <section className="home-section-head" id="nahj-gateways">
           <div><span className="eyebrow">EXPLORE NAHJ</span><h2>بوابات نهج</h2></div>
           <p>اختر المسار الذي يناسب هدفك وابدأ تجربتك.</p>
         </section>
@@ -101,12 +90,7 @@ function Home() {
             <div className="gateway-top"><span>01 / COMPETITIONS</span><b>⚖</b></div>
             <h3>بوابة المسابقات</h3>
             <p>تجارب قانونية تفاعلية تختبر المعرفة والتحليل والاستدلال وصياغة المرافعة.</p>
-            <div className="gateway-links">
-              <Link to="/competitions">الدخول إلى المسابقات <span>←</span></Link>
-              {ready && questionSet && <Link to={'/participate/' + questionSet.id}>التحدي الأسبوعي الحالي <span>←</span></Link>}
-              <Link to="/advocacy">مسابقة المرافعة القانونية <span>←</span></Link>
-              <Link to="/archive">أرشيف الأسئلة <span>←</span></Link>
-            </div>
+            <Link className="gateway-enter" to="/competitions">الدخول إلى بوابة المسابقات <span>←</span></Link>
           </article>
           <article className="gateway-card gateway-impact">
             <div className="gateway-top"><span>02 / IMPACT & SUSTAINABILITY</span><b>✧</b></div>
@@ -117,21 +101,6 @@ function Home() {
           </article>
         </section>
 
-        <section className="home-portals-section">
-          <div className="home-section-head">
-            <div><span className="eyebrow">ATHAR · IMPACT PORTALS</span><h2>بوابات منظومة أثَر</h2></div>
-            <p>البوابات متاحة للبدء حتى لو لم تُسجّل أي تقييمات بعد.</p>
-          </div>
-          <div className="home-portals-grid">
-            <Link className="home-portal-card" to="/impact"><span>01 · اللقاءات</span><strong>إحصائيات تقييم اللقاءات</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
-            <Link className="home-portal-card" to="/impact"><span>02 · الشراكات</span><strong>إحصائيات تقييم الشركاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
-            <Link className="home-portal-card" to="/impact"><span>03 · الفرق</span><strong>إحصائيات تقييم الفرق والأعضاء</strong><small>عرض عدد التقارير والمؤشرات المحفوظة</small><b>عرض الإحصائيات ←</b></Link>
-          </div>
-          <div className="home-ai-callout">
-            <div><span className="eyebrow">POWERED BY OPENAI</span><h3>مساعد أثَر الذكي</h3><p>مساعد تفاعلي يحاورك خطوة بخطوة، وينظم البيانات ويُعدّ تقريرًا أوليًا عن الأثر وفرص التحسين.</p></div>
-            <Link to="/impact/meetings">افتح المساعد الذكي ←</Link>
-          </div>
-        </section>
         <section className="home-bottom-note">
           <div><span className="eyebrow">A BETTER WAY TO MEASURE</span><h2>لا نكتفي بما أُنجز؛<br /><em>نسأل عن الأثر الذي تحقق.</em></h2></div>
           <p>نهج يجمع بين المعرفة، والتجربة، والتحليل؛ ليجعل التطوير مستمرًا والأثر أكثر وضوحًا.</p>
@@ -1106,7 +1075,11 @@ export default function App() {
   if (path.startsWith('/participate/')) return <Participate />
   if (path === '/archive') return <Archive />
   if (path === '/competitions') return <Competitions />
+  if (path.startsWith('/rate/')) return <ImpactSurveyPublic token={path.slice('/rate/'.length).split('/')[0]} />
   if (path === '/impact') return <Shell><ImpactHome /></Shell>
+  if (path === '/impact/meetings' || path === '/impact/teams' || path === '/impact/partners' || path === '/impact/general') return <Shell><ImpactCategoryDashboard category={path.split('/')[2]} /></Shell>
+  if (path.startsWith('/impact/assistant/')) return <Shell><ImpactPortal portal={path.slice('/impact/assistant/'.length).split('/')[0]} /></Shell>
+  if (path === '/admin/impact/surveys') return <Shell><ImpactSurveyAdmin /></Shell>
   if (path.startsWith('/impact/')) return <Shell><ImpactPortal portal={path.slice('/impact/'.length).split('/')[0]} /></Shell>
   if (path === '/advocacy') return <Advocacy />
   if (path === '/admin/advocacy') return <AdvocacyAdmin />
