@@ -460,7 +460,7 @@ export default function Advocacy() {
                   sending ||
                   !allStagesAnswered ||
                   finalArgument.trim().length < 200 ||
-                  finalArgument.trim().split(/\s+/).filter(Boolean).length > 5000 ||
+                  Array.from(finalArgument.trim()).length > 5000 ||
                   !/\p{L}/u.test(finalArgument)
                 }
                 onClick={submitParticipation}
