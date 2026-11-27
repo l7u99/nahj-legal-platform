@@ -146,3 +146,22 @@
 .advocacy-ai-score small{color:#b7c3ca;font-size:11px}.advocacy-ai-score strong{color:var(--nahj-gold);font-size:27px}
 .advocacy-ai-result h3{font-size:14px;color:var(--nahj-gold);margin:18px 0 8px}
 .advocacy-ai-result p,.advocacy-ai-result li{font-size:12px;line-height:1.9;color:#c0cbd1}
+
+
+/* Homepage portal visibility and brand mark */
+.hero-emblem.hero-logo{display:block;width:190px;height:190px;object-fit:contain;padding:12px;background:rgba(255,255,255,.96);border:1px solid var(--nahj-gold);border-radius:28px;transform:rotate(-5deg);box-shadow:0 0 80px rgba(217,189,125,.18)}
+.home-portals-section{margin:58px 0 24px}
+.home-portals-section .home-section-head{margin:0 0 20px}
+.home-portals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.home-portal-card{min-height:190px;padding:20px;border:1px solid var(--nahj-line);border-radius:17px;background:linear-gradient(145deg,#1b3040,#10212e);display:flex;flex-direction:column;gap:10px}
+.home-portal-card>span{font-size:10px;color:var(--nahj-gold);letter-spacing:1px}
+.home-portal-card>strong{font-size:19px}
+.home-portal-card>small{color:#9eacb6;font-size:11px}
+.home-portal-card>b{margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:12px;color:var(--nahj-gold)}
+.home-ai-callout{margin-top:16px;padding:22px 25px;border:1px solid rgba(217,189,125,.4);border-radius:17px;background:radial-gradient(circle at 90% 10%,rgba(217,189,125,.14),transparent 38%),#172d3b;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.home-ai-callout h3{font-size:22px;margin:7px 0}
+.home-ai-callout p{font-size:12px;line-height:1.9;color:#b5c1c8;margin:0}
+.home-ai-callout>a,.impact-assistant-link{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:12px 16px;border:1px solid var(--nahj-gold);border-radius:9px;color:var(--nahj-gold);font-size:12px;font-weight:700}
+.impact-mark.impact-logo{display:block;object-fit:contain;padding:5px;background:#fff;border-radius:16px}
+.impact-assistant-link{background:rgba(217,189,125,.08)}
+@media(max-width:760px){.home-portals-grid{grid-template-columns:1fr}.home-ai-callout{align-items:flex-start;flex-direction:column}.hero-emblem.hero-logo{width:145px;height:145px}}
