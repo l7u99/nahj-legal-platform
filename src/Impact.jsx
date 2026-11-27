@@ -40,7 +40,7 @@ export function ImpactHome() {
         <div className="impact-orbit orbit-two" />
         <span className="eyebrow">NAHJ · IMPACT & SUSTAINABILITY</span>
         <div className="impact-mark">نـ</div>
-        <h1>منظومة قياس الأثر <em>والاستدامة</em></h1>
+        <h1><em>أثَر</em> | منظومة قياس الأثر والاستدامة</h1>
         <p>من قياس النشاط إلى فهم الأثر، ومن البيانات إلى قرارات تصنع فرقًا.</p>
         <div className="impact-hero-actions">
           <a className="impact-primary" href="#impact-portals">استكشف المنظومة <span>←</span></a>
