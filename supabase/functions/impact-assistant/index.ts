@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     })
     const estimatedTokens = Math.ceil(requestBody.length / 4) + (mode === "report" ? 1500 : 700)
 
-    const { data: allowed, error: quotaError } = await supabase.rpc("reserve_impact_ai_request", {
+    const { data: allowed, error: quotaError } = await (supabase as any).rpc("reserve_impact_ai_request", {
       p_monthly_limit: monthlyLimit,
       p_estimated_input_tokens: estimatedTokens,
     })
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     return json({ error: "حدث خطأ غير متوقع أثناء معالجة الطلب." }, 500)
   } finally {
     if (reserved && supabase) {
-      const { error } = await supabase.rpc("record_impact_ai_usage", {
+      const { error } = await (supabase as any).rpc("record_impact_ai_usage", {
         p_actual_input_tokens: actualInputTokens,
         p_actual_output_tokens: actualOutputTokens,
         p_failed: failed,
