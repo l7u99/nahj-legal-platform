@@ -139,7 +139,7 @@ export function ImpactPortal() {
   }
 
   async function generateReport() {
-    if (generatingReport || messages.filter(message => message.role === 'user').length < 2) return
+    if (generatingReport || busy || messages.filter(message => message.role === 'user').length < 2 || messages[messages.length - 1]?.role !== 'assistant') return
     setGeneratingReport(true)
     setError('')
     setReportNotice('')
@@ -205,7 +205,7 @@ export function ImpactPortal() {
           <p>مساعد تفاعلي يطرح سؤالًا واحدًا في كل مرة، ويطلب التوضيح عند الحاجة، ثم يبني معك قراءة أولية للنتائج.</p>
           {!session && <div className="note">لحفظ التقرير في السجل الإداري، سجّل دخولك كمسؤول قبل بدء الجلسة. <Link to="/admin">دخول المسؤولين ←</Link></div>}
           <div className="guide-points"><span>✓ أسئلة متدرجة</span><span>✓ تحليل مرتبط بالسياق</span><span>✓ فرص تحسين عملية</span></div>
-          <button type="button" className="impact-reset" onClick={resetConversation}>بدء تقييم جديد ↻</button>
+          <button type="button" className="impact-reset" onClick={resetConversation} disabled={busy || generatingReport}>بدء تقييم جديد ↻</button>
           <small>لا تدخل بيانات شخصية أو معلومات سرية.</small>
         </aside>
         <div className="impact-chat-card">
@@ -221,10 +221,10 @@ export function ImpactPortal() {
           </form>
           <div className="chat-foot">تُرسل الرسالة عند الضغط على «إرسال» فقط · راجع المخرجات قبل اعتماد أي قرار</div>
           <div className="impact-report-actions">
-            <button type="button" className="impact-outline-btn" onClick={generateReport} disabled={generatingReport || messages.filter(message => message.role === 'user').length < 2}>
+            <button type="button" className="impact-outline-btn" onClick={generateReport} disabled={generatingReport || busy || messages.filter(message => message.role === 'user').length < 2 || messages[messages.length - 1]?.role !== 'assistant'}>
               {generatingReport ? 'جارٍ إعداد التقرير…' : 'إعداد تقرير الأثر'}
             </button>
-            <small>يتاح بعد إدخال إجابتين على الأقل، ويُنشأ عند الطلب فقط.</small>
+            <small>يتاح بعد إجابتين على الأقل واكتمال رد المساعد، ويُنشأ عند الطلب فقط.</small>
           </div>
           {report && <section className="impact-report" id="impact-report">
             <div className="impact-report-head"><span className="eyebrow">NAHJ · IMPACT REPORT</span><h2>{report.title}</h2><p>{report.executive_summary}</p></div>
