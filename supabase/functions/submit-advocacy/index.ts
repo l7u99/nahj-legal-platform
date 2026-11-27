@@ -531,7 +531,7 @@ Deno.serve(async (req) => {
       ai_feedback: finalAiFeedback,
       total_score: finalTotalScore,
       evaluation_status: finalEvaluationStatus,
-      evaluation_pending_reason: evaluationResult.reason || null,
+      evaluation_pending_reason: evaluationResult.reason ? "تعذر إكمال التقييم الآلي حاليًا، وحُفظت مشاركتك للمراجعة." : null,
       message: finalEvaluationStatus === "evaluated"
         ? "تم استلام المشاركة وتقييم المرافعة آليًا بنجاح."
         : "تم استلام المشاركة، والمرافعة بانتظار استكمال التقييم.",
