@@ -343,7 +343,7 @@ Deno.serve(async (req) => {
     let pendingReason = "تم حفظ المشاركة، والتقييم الآلي بانتظار توفر الخدمة أو مراجعة المسؤول.";
 
     const apiKey = Deno.env.get("OPENAI_API_KEY");
-    const monthlyLimit = Number(Deno.env.get("ADVOCACY_AI_MONTHLY_LIMIT") || 0);
+    const monthlyLimit = Number(Deno.env.get("ADVOCACY_AI_MONTHLY_LIMIT") || 100);
     let quotaReserved = false;
     let actualInputTokens = 0;
     let actualOutputTokens = 0;
@@ -451,6 +451,9 @@ Deno.serve(async (req) => {
       pendingReason = "";
     } catch (evaluationError) {
       evaluationFailed = true;
+      aiScore = null;
+      totalScore = null;
+      aiFeedback = null;
       console.error("Advocacy AI evaluation deferred:", evaluationError);
     } finally {
       if (quotaReserved) {
