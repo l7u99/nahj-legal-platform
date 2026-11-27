@@ -529,28 +529,24 @@ export default function AdvocacyAdmin() {
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
             <div className="mini"><b>إجمالي المتسابقين</b><h2>{submissions.length}</h2></div>
             <div className="mini"><b>بانتظار المراجعة</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-            <div className="mini"><b>تم تقييمهم آليًا</b><h2>{submissions.filter(row => row.ai_score !== null && row.ai_score !== undefined && ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
-            <div className="mini"><b>اعتماد بشري</b><h2>{submissions.filter(row => row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined).length}</h2></div>
-            <div className="mini"><b>سجلات قديمة تحتاج تدقيقًا</b><h2>{submissions.filter(row => row.evaluation_status === 'approved' && (row.ai_score === null || row.ai_score === undefined)).length}</h2></div>
+            <div className="mini"><b>بانتظار التدقيق</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
+            <div className="mini"><b>مشاركات معتمدة</b><h2>{submissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
+            
           </div>
           <p className="muted">الإحصائيات تخص المسابقة المحددة فقط، ولا تشمل مسابقة الأسئلة الأسبوعية.</p>
         </section>
 
         <section className="card">
-          <h2>الترتيب الأولي حسب تقييم الذكاء الاصطناعي</h2>
-          <p>يعرض أعلى الدرجات المسجلة من 100. لا يُعتمد الترتيب النهائي إلا بعد مراجعة بشرية للمرافعات المرجعية.</p>
-          {submissions.filter(row => row.ai_score !== null && row.ai_score !== undefined && ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status))
-            .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
-            .slice(0, 10).length ? (
-              submissions.filter(row => row.total_score !== null && row.total_score !== undefined)
-                .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
-                .slice(0, 10)
-                .map((row, index) => <article className="leader" key={row.id}>
-                  <b>#{index + 1} · {row.full_name}</b>
-                  <span>{row.total_score} / 100</span>
-                  <small>حالة التقييم: {row.evaluation_status}</small>
-                </article>)
-            ) : <p>سيظهر ترتيب العشرة الأوائل بعد إدخال الدرجات واعتماد التقييم.</p>}
+          <h2>أفضل المشاركات مبدئيًا</h2>
+          <p>فرز استرشادي بحسب درجة المراحل الموضوعية ثم سرعة الإكمال. لا يمثل تقييمًا للمرافعة أو ترتيبًا نهائيًا؛ تعتمد النتائج بعد التدقيق البشري.</p>
+          {submissions.filter(row => row.evaluation_status === 'pending')
+            .sort((a, b) => Number(b.objective_score || 0) - Number(a.objective_score || 0) || Number(a.duration_seconds ?? Number.MAX_SAFE_INTEGER) - Number(b.duration_seconds ?? Number.MAX_SAFE_INTEGER))
+            .slice(0, 10).map((row, index) => <article className="leader" key={row.id}>
+              <b>#{index + 1} · {row.full_name}</b>
+              <span>{row.objective_score ?? 0} / 15</span>
+              <small>{row.duration_seconds == null ? 'المدة غير متاحة' : 'المدة: ' + Math.floor(row.duration_seconds / 60) + ' دقيقة'} · بانتظار تدقيق المرافعة</small>
+            </article>)}
+          {!submissions.some(row => row.evaluation_status === 'pending') && <p>لا توجد مشاركات بانتظار المراجعة حاليًا.</p>}
         </section>
 
         <section className="card">
@@ -558,7 +554,7 @@ export default function AdvocacyAdmin() {
           <p>تظهر هذه البيانات للمسؤولين فقط. رقم الجوال غير معروض لأن قاعدة البيانات تحفظ بصمته فقط.</p>
           {submissions.length ? submissions.map(row => <article className="review" key={row.id}>
             <b>{row.full_name}</b>
-            <p>الحالة: {row.evaluation_status === 'approved' && (row.ai_score === null || row.ai_score === undefined) ? 'سجل قديم يحتاج تدقيقًا' : row.evaluation_status} · الدرجة: {row.ai_score ?? 'بانتظار التقييم'} / 100 · وقت الإرسال: {dateLabel(row.submitted_at)}</p>
+            <p>الحالة: {row.evaluation_status} · الدرجة الموضوعية: {row.objective_score ?? 0} / 15 · وقت الإرسال: {dateLabel(row.submitted_at)}</p>
             <button className="btn secondary" type="button" onClick={() => setSelectedSubmission(row)}>عرض المشاركة</button>
           </article>) : <p>لا توجد مشاركات مسجلة بعد.</p>}
           {selectedSubmission && <article className="review">
@@ -567,19 +563,8 @@ export default function AdvocacyAdmin() {
             <h4>المرافعة الختامية</h4>
             <p style={{whiteSpace:'pre-wrap'}}>{selectedSubmission.final_argument}</p>
             <p>الدرجة الموضوعية: {selectedSubmission.objective_score} / 15</p>
-            <p>درجة التقييم الآلي: {selectedSubmission.ai_score ?? 'بانتظار التقييم'} / 100</p>
-            {selectedSubmission.ai_feedback ? <div className="note" style={{textAlign:'right', marginTop:14}}>
-              <h4>ملخص التقييم الآلي</h4>
-              <p>{selectedSubmission.ai_feedback.summary}</p>
-              <b>المعايير الخمسة</b>
-              {(selectedSubmission.ai_feedback.criteria || []).map((item, index) => <article className="review" key={index}>
-                <b>{item.name} · {item.score} / 20</b><p>{item.comment}</p>
-              </article>)}
-              <b>نقاط القوة</b><ul>{(selectedSubmission.ai_feedback.strengths || []).map((item,index)=><li key={index}>{item}</li>)}</ul>
-              <b>فرص التحسين</b><ul>{(selectedSubmission.ai_feedback.improvements || []).map((item,index)=><li key={index}>{item}</li>)}</ul>
-              {(selectedSubmission.ai_feedback.legal_reference_warnings || []).length > 0 && <><b>إحالات تحتاج تحققًا</b><ul>{selectedSubmission.ai_feedback.legal_reference_warnings.map((item,index)=><li key={index}>{item}</li>)}</ul></>}
-              <small>{selectedSubmission.ai_feedback.disclaimer || 'التقييم آلي أولي ويخضع للمراجعة البشرية.'}</small>
-            </div> : <div className="note">التقييم لم يكتمل بعد. الحالة الحالية: {selectedSubmission.evaluation_status}</div>}
+            <p>حالة المرافعة: بانتظار التدقيق البشري</p>
+            <div className="note">لم يُفعّل التقييم الآلي؛ تُراجع المرافعة يدويًا قبل اعتماد النتائج.</div>
             <button className="btn secondary" type="button" onClick={() => setSelectedSubmission(null)}>إغلاق التفاصيل</button>
           </article>}
           <div className="note">اعتماد التقييم ونشر النتائج غير مفعّلين بعد؛ يحتاجان إلى وظيفة خادمية وسياسة صلاحيات إضافية قبل إتاحتهما.</div>
