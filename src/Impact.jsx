@@ -153,7 +153,7 @@ const atharCategoryMeta = {
 function AtharCategoryCard({ item, count, replies }) {
   return (
     <Link className="athar-category-card" to={'/impact/' + item.id}>
-      <div className="athar-category-card-top"><span>{item.number} / ATHAR INDICATORS</span><b>{item.id === 'meetings' ? '◷' : item.id === 'teams' ? '◎' : '◇'}</b></div>
+      <div className="athar-category-card-top"><span>{item.number} / ATHAR INDICATORS</span><b>{item.id === 'meetings' ? '◷' : item.id === 'teams' ? '◎' : item.id === 'partners' ? '◇' : '✧'}</b></div>
       <h2>{item.title}</h2>
       <p>{item.desc}</p>
       <div className="athar-category-card-stats"><span>{count.toLocaleString('ar-SA')} استبيان</span><span>{replies.toLocaleString('ar-SA')} استجابة</span></div>
@@ -230,7 +230,7 @@ export function ImpactCategoryDashboard({ category }) {
       <section className="athar-panel"><div className="athar-bar-chart">{monthly.map(item => <div className="athar-bar-column" key={item.key}><strong>{data.loading ? '—' : item.total}</strong><div className="athar-bar-track"><i style={{ height: data.loading ? '0%' : (item.total / maxMonthly * 100) + '%' }} /></div><small>{item.label}</small></div>)}</div>{!data.loading && responses.length === 0 && <div className="athar-chart-empty">بانتظار أول استجابة لهذا المجال؛ ستظهر حركة التقييم هنا.</div>}</section>
       <section className="athar-dashboard-section-head"><div><span className="eyebrow">INDICATOR BREAKDOWN</span><h2>نتائج مؤشرات التقييم</h2></div><span className="athar-panel-unit">متوسط من 5</span></section>
       <section className="athar-indicator-list">
-        {questionResults.length ? questionResults.map((item, index) => <article className="athar-indicator-row" key={item.id}><div><small>مؤشر {String(index + 1).padStart(2, '0')} · {item.question_type === 'rating' ? 'تقييم رقمي' : item.question_type === 'choice' ? 'اختيار من متعدد' : 'إجابة نصية'}</small><h3>{item.prompt}</h3><span>{item.count.toLocaleString('ar-SA')} إجابة</span></div>{item.question_type === 'rating' ? <><strong>{item.ratingsCount ? item.average.toFixed(1) : '0.0'}<small> / 5</small></strong><div className="athar-indicator-track"><i style={{ width: (item.average / 5 * 100) + '%' }} /></div></> : item.question_type === 'choice' ? <div className="athar-choice-breakdown">{item.choices.map(choice => <div key={choice.option}><span>{choice.option}</span><b>{choice.count.toLocaleString('ar-SA')}</b><i style={{ width: (item.count ? choice.count / item.count * 100 : 0) + '%' }} /></div>)}</div> : <div className="athar-text-responses">{item.textAnswers.length ? item.textAnswers.map((answer, answerIndex) => <p key={answerIndex}>“{answer}”</p>) : <small>لا توجد إجابات نصية بعد.</small>}</div>}</article>) : <div className="athar-chart-empty">لا توجد أسئلة في هذا المجال حتى الآن.</div>}
+        {questionResults.length ? questionResults.map((item, index) => <article className="athar-indicator-row" key={item.id}><div><small>مؤشر {String(index + 1).padStart(2, '0')} · {item.question_type === 'rating' ? 'تقييم رقمي' : item.question_type === 'choice' ? 'اختيار من متعدد' : 'إجابة نصية'}</small><h3>{item.prompt}</h3><span>{item.count.toLocaleString('ar-SA')} إجابة</span></div>{item.question_type === 'rating' ? <><strong>{item.ratingsCount ? item.average.toFixed(1) : '0.0'}<small> / 5</small></strong><div className="athar-indicator-track"><i style={{ width: (item.average / 5 * 100) + '%' }} /></div></> : item.question_type === 'choice' ? <div className="athar-choice-breakdown">{item.choices.map(choice => <div key={choice.option}><span>{choice.option}</span><b>{choice.count.toLocaleString('ar-SA')}</b><i style={{ width: (item.count ? choice.count / item.count * 100 : 0) + '%' }} /></div>)}</div> : <div className="athar-text-responses">{item.textAnswers.length ? item.textAnswers.map((answer, answerIndex) => <p key={answerIndex}>“{answer}”</p>) : <small>لا توجد إجابات نصية بعد.</small>}</div>}</article>) : <><div className="athar-dimension-grid">{meta.dimensions.map((dimension, index) => <article className="athar-dimension-card" key={dimension}><span>مؤشر {String(index + 1).padStart(2, '0')}</span><h3>{dimension}</h3><strong>—</strong><small>بانتظار إعداد التقييمات وورود البيانات</small></article>)}</div><div className="athar-chart-empty">المؤشرات الأساسية جاهزة لهذا المجال. ستظهر نتائج القياس تلقائيًا هنا بعد إضافة الأسئلة واستقبال أول الاستجابات.</div></>}
       </section>
       <section className="athar-next-step"><div><span className="eyebrow">NEXT STEP</span><h2>{surveys.length ? 'طوّري أدوات القياس باستمرار' : 'ابدئي بإنشاء أول استبيان لهذا المجال'}</h2><p>أنشئي استبيانًا مرتبطًا بهذا المجال لتجميع بيانات قابلة للمقارنة وتحليلها.</p></div><Link className="impact-primary" to="/admin/impact/surveys">إدارة الاستبيانات ←</Link></section>
     </main>
@@ -557,6 +557,7 @@ export function ImpactSurveyAdmin() {
   ])
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [surveyFilter, setSurveyFilter] = useState('all')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -641,6 +642,8 @@ export function ImpactSurveyAdmin() {
     catch { setNotice('رابط التقييم: ' + url) }
   }
 
+  const filteredSurveys = surveyFilter === 'all' ? surveys : surveys.filter(survey => survey.category === surveyFilter)
+
   if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
 
   return (
@@ -666,8 +669,9 @@ export function ImpactSurveyAdmin() {
           <small className="athar-form-hint">لن يُنشر الاستبيان تلقائيًا. راجعيه أولًا ثم اختاري «نشر» من قائمة الاستبيانات.</small>
         </form>
         <section className="athar-panel athar-survey-list-panel">
-          <div className="athar-panel-heading"><div><span className="eyebrow">YOUR SURVEYS</span><h2>الاستبيانات المنشأة</h2></div><span className="athar-count-pill">{surveys.length} استبيان</span></div>
-          {surveys.length ? <div className="athar-survey-list">{surveys.map(survey => {
+          <div className="athar-panel-heading"><div><span className="eyebrow">YOUR SURVEYS</span><h2>الاستبيانات المنشأة</h2></div><span className="athar-count-pill">{filteredSurveys.length} من {surveys.length} استبيان</span></div>
+          <div className="athar-survey-filter"><label htmlFor="athar-survey-category-filter">تصفية حسب المجال</label><select id="athar-survey-category-filter" value={surveyFilter} onChange={event => setSurveyFilter(event.target.value)}><option value="all">جميع المجالات</option><option value="meetings">اللقاءات والفعاليات</option><option value="teams">الفرق والأعضاء</option><option value="partners">الشراكات</option><option value="general">التقييمات العامة</option></select></div>
+          {filteredSurveys.length ? <div className="athar-survey-list">{filteredSurveys.map(survey => {
             const responseCount = responses.filter(row => row.survey_id === survey.id).length
             const statusLabel = survey.status === 'published' ? 'منشور' : survey.status === 'closed' ? 'مغلق' : 'مسودة'
             return <article className="athar-survey-row" key={survey.id}>
@@ -681,7 +685,7 @@ export function ImpactSurveyAdmin() {
                 {survey.status === 'published' && <button className="impact-outline-btn" type="button" onClick={() => copySurveyLink(survey)}>نسخ رابط التقييم</button>}
               </div>
             </article>
-          })}</div> : <div className="athar-empty-state"><span>✧</span><h3>لا توجد استبيانات حتى الآن</h3><p>ابدئي بإنشاء أول استبيان من النموذج المقابل، وستظهر جميع الاستبيانات هنا.</p></div>}
+          })}</div> : <div className="athar-empty-state"><span>✧</span><h3>لا توجد استبيانات حتى الآن</h3><p>{surveys.length ? 'لا توجد استبيانات ضمن المجال المحدد. اختاري مجالًا آخر أو اعرضي جميع المجالات.' : 'ابدئي بإنشاء أول استبيان من النموذج المقابل، وستظهر جميع الاستبيانات هنا.'}</p></div>}
         </section>
       </section>
     </main>
