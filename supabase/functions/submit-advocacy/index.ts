@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
     const { data: existing, error: existingError } = await supabase
       .from("advocacy_submissions")
-      .select("id,evaluation_status,total_score,objective_score")
+      .select("id,evaluation_status,total_score,objective_score,submitted_at,duration_seconds")
       .eq("attempt_id", attemptId)
       .maybeSingle();
 
@@ -127,48 +127,25 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    // معالجة المشاركة المحفوظة سابقًا دون إنشاء مشاركة مكررة.
+    // لا نعيد تقييم المشاركة أو نغيّر درجاتها عند إعادة الطلب.
     if (existing) {
-      const objectiveScore = Number(existing.objective_score || 0);
-      const totalScore = objectiveScore + 10;
+      if (attempt.status === "started") {
+        const { error: attemptUpdateError } = await supabase
+          .from("advocacy_attempts")
+          .update({
+            status: "submitted",
+            completed_at: existing.submitted_at,
+            duration_seconds: existing.duration_seconds,
+          })
+          .eq("id", attemptId)
+          .eq("status", "started");
 
-      const { error: existingUpdateError } = await supabase
-        .from("advocacy_submissions")
-        .update({
-          evaluation_status: "approved",
-          total_score: totalScore,
-        })
-        .eq("id", existing.id);
-
-      if (existingUpdateError) {
-        console.error("Existing submission update error:", existingUpdateError);
-        return response({
-          error: "تعذر تحديث حالة المشاركة السابقة",
-        }, 500);
-      }
-
-      // تحديث جميع الحقول المطلوبة لقيد حالة المحاولة.
-      const startedAt = new Date(attempt.started_at).getTime();
-
-      const durationSeconds = Math.max(
-        0,
-        Math.floor((Date.now() - startedAt) / 1000),
-      );
-
-      const { error: attemptUpdateError } = await supabase
-        .from("advocacy_attempts")
-        .update({
-          status: "submitted",
-          completed_at: new Date().toISOString(),
-          duration_seconds: durationSeconds,
-        })
-        .eq("id", attemptId);
-
-      if (attemptUpdateError) {
-        console.error("Attempt update error:", attemptUpdateError);
-        return response({
-          error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
-        }, 500);
+        if (attemptUpdateError) {
+          console.error("Attempt update error:", attemptUpdateError);
+          return response({
+            error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
+          }, 500);
+        }
       }
 
       return response({
@@ -176,10 +153,10 @@ Deno.serve(async (req) => {
         already_submitted: true,
         submission_id: existing.id,
         status: "submitted",
-        evaluation_status: "approved",
-        objective_score: objectiveScore,
-        advocacy_score: 10,
-        total_score: totalScore,
+        evaluation_status: existing.evaluation_status,
+        objective_score: Number(existing.objective_score || 0),
+        total_score: existing.total_score,
+        message: "سبق استلام مشاركتك وحُفظت بنجاح.",
       });
     }
 
@@ -298,9 +275,7 @@ Deno.serve(async (req) => {
       Math.floor((Date.now() - startedAt) / 1000),
     );
 
-    // المرافعة تستحق 10 درجات عند استيفاء شروط التسليم.
-    const advocacyScore = 10;
-    const totalScore = objectiveScore + advocacyScore;
+    // لا تُمنح درجة للمرافعة عند الاستلام؛ تبقى للمراجعة اليدوية لاحقًا.
 
     const { data: submission, error: insertError } = await supabase
       .from("advocacy_submissions")
@@ -312,8 +287,8 @@ Deno.serve(async (req) => {
         answers,
         final_argument: finalArgument,
         objective_score: objectiveScore,
-        total_score: totalScore,
-        evaluation_status: "approved",
+        total_score: null,
+        evaluation_status: "pending",
         submitted_at: new Date().toISOString(),
         started_at: attempt.started_at,
         duration_seconds: durationSeconds,
@@ -351,9 +326,9 @@ Deno.serve(async (req) => {
       status: "submitted",
       submission_id: submission.id,
       objective_score: objectiveScore,
-      advocacy_score: advocacyScore,
-      total_score: totalScore,
-      evaluation_status: "approved",
+      total_score: null,
+      evaluation_status: "pending",
+      message: "تم استلام مشاركتك وحفظها بنجاح، والمرافعة بانتظار المراجعة.",
     });
 
   } catch (error) {
