@@ -1107,7 +1107,7 @@ export default function App() {
   if (path === '/archive') return <Archive />
   if (path === '/competitions') return <Competitions />
   if (path === '/impact') return <Shell><ImpactHome /></Shell>
-  if (path.startsWith('/impact/')) return <Shell><ImpactPortal /></Shell>
+  if (path.startsWith('/impact/')) return <Shell><ImpactPortal portal={path.slice('/impact/'.length).split('/')[0]} /></Shell>
   if (path === '/advocacy') return <Advocacy />
   if (path === '/admin/advocacy') return <AdvocacyAdmin />
   if (path === '/admin/impact') return <Shell><ImpactAdmin /></Shell>
