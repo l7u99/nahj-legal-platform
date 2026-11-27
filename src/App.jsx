@@ -4,6 +4,7 @@ import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
 import AdvocacyAdmin from './AdvocacyAdmin'
+import { ImpactHome, ImpactPortal } from './Impact'
 
 function Header() {
   return (
@@ -21,8 +22,9 @@ function Header() {
       </Link>
       <nav>
         <Link to="/">الرئيسية</Link>
-        <Link to="/archive">أرشيف الأسئلة</Link>
-        <Link to="/admin">دخول المسؤولين</Link>
+        <Link to="/competitions">المسابقات</Link>
+        <Link to="/impact">قياس الأثر</Link>
+        <Link to="/admin">الإدارة</Link>
       </nav>
     </header>
   )
@@ -65,76 +67,91 @@ function formatDate(value) {
 
 function Home() {
   const [questionSet, setQuestionSet] = useState(null)
-
   useEffect(() => {
     if (!ready) return
-    db.from('question_sets')
-      .select('id,title,description')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    db.from('question_sets').select('id,title,description').eq('status', 'published')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
       .then(({ data }) => setQuestionSet(data))
   }, [])
-
   return (
     <Shell>
-      <main>
-        <Hero
-          title={<>دقيقة قانونية <i>|</i> مع نهج القانوني</>}
-          desc="مساحة أسبوعية للتعلّم، وفرصة جديدة لاختبار معرفتك القانونية."
-        />
-        <div className="cols">
-          <section className="card">
-            <small className="gold">التحدّي القانوني الأسبوعي</small>
-            <h2>معرفةٌ تُبنى بسؤال، وثقافةٌ تنمو بالممارسة.</h2>
-            <p>
-              اختبر معلوماتك القانونية من خلال أسئلة مختارة،
-              مع تفسير للإجابة ومصدرها النظامي.
-            </p>
-            <div className="chips">
-              <span>أسئلة موثقة</span>
-              <span>نتيجة فورية</span>
-              <span>أرشيف الأسئلة</span>
+      <main className="home-v2">
+        <section className="home-hero">
+          <div className="home-hero-copy">
+            <span className="eyebrow">NAHJ LEGAL · KNOWLEDGE TO IMPACT</span>
+            <h1>من المعرفة القانونية<br /><em>إلى أثرٍ يُصنع.</em></h1>
+            <p>منصة نهج القانوني؛ مساحة للمنافسة والتعلّم، ومنظومة لقياس الأثر والاستدامة وتطوير جودة العمل.</p>
+            <div className="home-actions">
+              <Link className="btn" to="/competitions">اكتشف المسابقات ←</Link>
+              <Link className="home-text-link" to="/impact">استكشف منظومة الأثر</Link>
             </div>
-          </section>
+          </div>
+          <div className="home-hero-art" aria-hidden="true">
+            <div className="hero-ring ring-a" /><div className="hero-ring ring-b" />
+            <div className="hero-emblem">نـ</div><span className="hero-art-caption">NAHJ · 2026</span>
+          </div>
+        </section>
+        <section className="home-section-head">
+          <div><span className="eyebrow">EXPLORE NAHJ</span><h2>بوابات نهج</h2></div>
+          <p>اختر المسار الذي يناسب هدفك وابدأ تجربتك.</p>
+        </section>
+        <section className="gateway-grid">
+          <article className="gateway-card gateway-competition">
+            <div className="gateway-top"><span>01 / COMPETITIONS</span><b>⚖</b></div>
+            <h3>بوابة المسابقات</h3>
+            <p>تجارب قانونية تفاعلية تختبر المعرفة والتحليل والاستدلال وصياغة المرافعة.</p>
+            <div className="gateway-links">
+              <Link to="/competitions">الدخول إلى المسابقات <span>←</span></Link>
+              {ready && questionSet && <Link to={'/participate/' + questionSet.id}>التحدي الأسبوعي الحالي <span>←</span></Link>}
+              <Link to="/advocacy">مسابقة المرافعة القانونية <span>←</span></Link>
+              <Link to="/archive">أرشيف الأسئلة <span>←</span></Link>
+            </div>
+          </article>
+          <article className="gateway-card gateway-impact">
+            <div className="gateway-top"><span>02 / IMPACT & SUSTAINABILITY</span><b>✧</b></div>
+            <h3>منظومة قياس الأثر والاستدامة</h3>
+            <p>منظومة ذكية لتحليل جودة اللقاءات والشراكات وأداء الفرق، وتحويل البيانات إلى فرص تطوير وقرارات أوضح.</p>
+            <div className="gateway-pills"><span>تقييم اللقاءات</span><span>تقييم الشركاء</span><span>تقييم الفرق</span></div>
+            <Link className="gateway-enter" to="/impact">استكشف المنظومة <span>←</span></Link>
+          </article>
+        </section>
+        <section className="home-bottom-note">
+          <div><span className="eyebrow">A BETTER WAY TO MEASURE</span><h2>لا نكتفي بما أُنجز؛<br /><em>نسأل عن الأثر الذي تحقق.</em></h2></div>
+          <p>نهج يجمع بين المعرفة، والتجربة، والتحليل؛ ليجعل التطوير مستمرًا والأثر أكثر وضوحًا.</p>
+        </section>
+      </main>
+    </Shell>
+  )
+}
 
-          <section className="card center">
-            <div className="seal">⚖</div>
-            <h2>هل أنت مستعد للتحدّي؟</h2>
-            {!ready ? (
-              <Note>المنصة قيد التجهيز.</Note>
-            ) : questionSet ? (
-              <>
-                <p>{questionSet.title}</p>
-                <Link className="btn" to={`/participate/${questionSet.id}`}>
-                  ابدأ المشاركة ←
-                </Link>
-              </>
-            ) : (
-              <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>
-            )}
-            <small className="muted">بيانات المشاركة لا تظهر للعامة.</small>
+function Competitions() {
+  const [questionSet, setQuestionSet] = useState(null)
+  useEffect(() => {
+    if (!ready) return
+    db.from('question_sets').select('id,title,description').eq('status', 'published')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => setQuestionSet(data))
+  }, [])
+  return (
+    <Shell>
+      <main className="competition-page">
+        <Hero title="بوابة المسابقات" desc="تعلّم، حلّل، استدل، واصنع حجتك القانونية." />
+        <div className="competition-grid">
+          <section className="card competition-feature">
+            <span className="gold">01 · التحدّي الأسبوعي</span>
+            <h2>دقيقة قانونية</h2>
+            <p>أسئلة قانونية موثقة، نتيجة فورية، وتفسير مدعوم بالمصدر النظامي.</p>
+            {questionSet ? <><h3>{questionSet.title}</h3><Link className="btn" to={'/participate/' + questionSet.id}>ابدأ التحدّي ←</Link></> : <Note>لا توجد مجموعة أسئلة منشورة حاليًا.</Note>}
+            <Link className="competition-sub-link" to="/archive">تصفّح أرشيف الأسئلة ←</Link>
+          </section>
+          <section className="card competition-feature">
+            <span className="gold">02 · التجربة التطبيقية</span>
+            <h2>المرافعة القانونية</h2>
+            <p>اقرأ وقائع القضية، حدّد التكييف، حلّل الأدلة، ثم اكتب مرافعتك الختامية.</p>
+            <Link className="btn" to="/advocacy">استعراض مسابقات المرافعة ←</Link>
           </section>
         </div>
-
-        <section className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <small className="gold">تجربة تفاعلية جديدة</small>
-            <h2 style={{ margin: '6px 0' }}>مرافعة قانونية | مع نهج القانوني</h2>
-            <p style={{ margin: 0 }}>حلّل، استدل، ثم قدّم حجتك القانونية بأسلوبك.</p>
-          </div>
-          <Link className="btn" to="/advocacy">استعراض المرافعة ←</Link>
-        </section>
-
-        <section className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <small className="gold">للرجوع إلى الأسئلة السابقة</small>
-            <h2 style={{ margin: '6px 0' }}>أرشيف الأسئلة الأسبوعية</h2>
-            <p style={{ margin: 0 }}>تصفّح الأسئلة السابقة وإجاباتها الصحيحة وتفسيراتها ومصادرها النظامية.</p>
-          </div>
-          <Link className="btn" to="/archive">استعراض الأرشيف ←</Link>
-        </section>
+        <div className="competition-footer"><Link to="/">← العودة إلى الرئيسية</Link></div>
       </main>
     </Shell>
   )
@@ -1023,6 +1040,9 @@ export default function App() {
 
   if (path.startsWith('/participate/')) return <Participate />
   if (path === '/archive') return <Archive />
+  if (path === '/competitions') return <Competitions />
+  if (path === '/impact') return <Shell><ImpactHome /></Shell>
+  if (path.startsWith('/impact/')) return <Shell><ImpactPortal /></Shell>
   if (path === '/advocacy') return <Advocacy />
   if (path === '/admin/advocacy') return <AdvocacyAdmin />
   if (path === '/admin') return <Admin />
