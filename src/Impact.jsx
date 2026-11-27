@@ -223,7 +223,7 @@ export function ImpactCategoryDashboard({ category }) {
       <section className="athar-kpi-grid">
         <article className="athar-kpi"><span>إجمالي الاستجابات</span><strong>{data.loading ? '—' : responses.length.toLocaleString('ar-SA')}</strong><small>استجابات هذا المجال فقط</small><i>↗</i></article>
         <article className="athar-kpi"><span>الاستبيانات النشطة</span><strong>{data.loading ? '—' : active.toLocaleString('ar-SA')}</strong><small>روابط تستقبل التقييمات</small><i>◉</i></article>
-        <article className="athar-kpi"><span>متوسط التقييم</span><strong>{data.loading ? '—' : average} / 5</strong><small>{ratings.length.toLocaleString('ar-SA')} إجابة تقييمية</small><i>☆</i></article>
+        <article className="athar-kpi"><span>متوسط التقييم</span><strong>{data.loading || !ratings.length ? '—' : average + ' / 5'}</strong><small>{ratings.length ? ratings.length.toLocaleString('ar-SA') + ' إجابة تقييمية' : 'بانتظار أول تقييم'}</small><i>☆</i></article>
         <article className="athar-kpi"><span>عدد الاستبيانات</span><strong>{data.loading ? '—' : surveys.length.toLocaleString('ar-SA')}</strong><small>جميع الحالات</small><i>▤</i></article>
       </section>
       <section className="athar-dashboard-section-head"><div><span className="eyebrow">RESPONSE TREND</span><h2>تطور الاستجابات</h2></div><span className="athar-panel-unit">آخر 6 أشهر · {meta.shortTitle}</span></section>
