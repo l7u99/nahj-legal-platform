@@ -172,13 +172,24 @@ export function ImpactHome() {
 
   return (
     <main className="impact-page">
-      <section className="impact-portal-heading">
-        <span className="eyebrow">NAHJ · IMPACT & SUSTAINABILITY</span>
-        <h1>لوحة قياس الأثر والاستدامة</h1>
-        <p>نظرة إحصائية على التقييمات والتقارير ومؤشرات الأداء عبر بوابات نهج.</p>
-        <div className="impact-hero-actions">
-          <Link className="impact-primary" to="/admin/impact">سجل التقارير ومراجعتها ←</Link>
-          <Link className="impact-assistant-link" to="/impact/meetings">فتح مساعد نهج الذكي بشكل منفصل ✧</Link>
+      <section className="athar-hero">
+        <div className="athar-hero-orbit athar-orbit-one" />
+        <div className="athar-hero-orbit athar-orbit-two" />
+        <div className="athar-hero-copy">
+          <span className="eyebrow">NAHJ ECOSYSTEM · IMPACT INTELLIGENCE</span>
+          <div className="athar-wordmark"><span className="athar-symbol">✧</span><span>أثَــر</span></div>
+          <h1>من البيانات إلى القرار،<br /><em>ومن الإنجاز إلى الاستدامة.</em></h1>
+          <p>منظومة مؤسسية لقياس الأثر، وفهم جودة الأداء، وتحويل النتائج الموثقة إلى فرص تطوير مستمرة.</p>
+          <div className="impact-hero-actions">
+            <Link className="impact-primary" to="/admin/impact">سجل التقارير ومراجعتها ←</Link>
+            <span className="athar-live-note"><i /> لوحة مؤشرات مرتبطة بالبيانات المسجلة</span>
+          </div>
+        </div>
+        <div className="athar-hero-visual" aria-hidden="true">
+          <div className="athar-orbit-core"><span>أثَر</span><small>IMPACT / 01</small></div>
+          <span className="athar-orbit-label label-top">MEASURE</span>
+          <span className="athar-orbit-label label-side">ANALYZE</span>
+          <span className="athar-orbit-label label-bottom">SUSTAIN</span>
         </div>
       </section>
 
@@ -208,17 +219,26 @@ export function ImpactHome() {
         ))}
       </section>
 
-      <section className="impact-method">
-        <div className="method-copy">
-          <span className="eyebrow">SUSTAINABILITY RADAR</span>
+      <section className="athar-sustainability-panel">
+        <div className="athar-panel-heading">
+          <span className="eyebrow">SUSTAINABILITY FRAMEWORK · 05 DIMENSIONS</span>
           <h2>رادار <em>الاستدامة</em></h2>
-          <p>يعرض قراءة مجمعة لمؤشرات الاستدامة عند توفر بيانات وتقارير كافية.</p>
-          <small>{reports.length ? 'ستُبنى القراءة على المؤشرات المسجلة في التقارير المحفوظة.' : 'لا توجد تقارير محفوظة بعد؛ ستظهر المؤشرات هنا بعد تسجيل أول تقييم وحفظ تقريره.'}</small>
+          <p>خمسة أبعاد مترابطة تمنح نهج قراءة أوسع من عدد الأنشطة إلى جودة الاستمرارية.</p>
+          <small>{reports.length ? 'سيُبنى التقييم على الأدلة والمؤشرات المعتمدة في التقارير.' : 'الأبعاد معروضة كإطار قياس؛ لا تُحتسب درجات قبل توفر بيانات وأدلة كافية.'}</small>
         </div>
-        <div className="method-steps">
-          <div><b>01</b><span><strong>قياس اللقاءات</strong><small>{loading ? 'جارٍ التحميل…' : count('meetings') + ' تقارير محفوظة'}</small></span></div>
-          <div><b>02</b><span><strong>قياس الشراكات</strong><small>{loading ? 'جارٍ التحميل…' : count('partners') + ' تقارير محفوظة'}</small></span></div>
-          <div><b>03</b><span><strong>قياس الفرق</strong><small>{loading ? 'جارٍ التحميل…' : count('teams') + ' تقارير محفوظة'}</small></span></div>
+        <div className="athar-radar-wrap">
+          <div className="athar-radar" aria-label="مخطط توضيحي لأبعاد الاستدامة الخمسة">
+            <span className="radar-ring ring-outer" /><span className="radar-ring ring-middle" /><span className="radar-ring ring-inner" />
+            <span className="radar-axis axis-one" /><span className="radar-axis axis-two" /><span className="radar-axis axis-three" /><span className="radar-axis axis-four" /><span className="radar-axis axis-five" />
+            <div className="radar-center"><b>أثَر</b><small>5D MODEL</small></div>
+          </div>
+          <div className="athar-dimension-list">
+            <div><b>01</b><span><strong>المؤسسية</strong><small>السياسات والحوكمة والتوثيق</small></span></div>
+            <div><b>02</b><span><strong>التشغيلية</strong><small>استمرارية التنفيذ وكفاءة العمليات</small></span></div>
+            <div><b>03</b><span><strong>المعرفية</strong><small>نقل المعرفة وحفظ الخبرات</small></span></div>
+            <div><b>04</b><span><strong>الشراكات</strong><small>قيمة التعاون واستمرارية العلاقات</small></span></div>
+            <div><b>05</b><span><strong>التطويرية</strong><small>التحسين والتعلم وقياس التقدم</small></span></div>
+          </div>
         </div>
       </section>
 
