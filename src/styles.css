@@ -457,3 +457,13 @@
 .athar-indicator-track{grid-column:1/-1;height:6px;border-radius:10px;background:rgba(255,255,255,.07);overflow:hidden}.athar-indicator-track i{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,#8d7044,#e1ca91)}
 @media(max-width:850px){.athar-category-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.athar-category-grid,.athar-overview-strip{grid-template-columns:1fr}.athar-category-card{min-height:210px}.athar-indicator-row{gap:8px 12px;padding:14px}}
+
+
+/* Athar answer detail visualizations */
+.athar-choice-breakdown{grid-column:1/-1;display:grid;gap:9px}
+.athar-choice-breakdown>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;align-items:center;font-size:10px;color:#c4cdd2}
+.athar-choice-breakdown b{color:#dfc88e}
+.athar-choice-breakdown i{grid-column:1/-1;display:block;height:5px;border-radius:8px;background:linear-gradient(90deg,#8d7044,#e1ca91);max-width:100%;position:relative}
+.athar-text-responses{grid-column:1/-1;display:grid;gap:8px}
+.athar-text-responses p{margin:0;padding:10px 12px;border-right:2px solid #b99a60;background:rgba(255,255,255,.035);border-radius:7px;color:#c4cdd2;font-size:10px;line-height:1.9;overflow-wrap:anywhere}
+.athar-text-responses>small{color:#91a2ad;font-size:10px}
