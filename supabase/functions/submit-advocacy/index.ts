@@ -288,25 +288,6 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const [{ data: caseRow }, { data: caseDetails }] = await Promise.all([
-      supabase.from("advocacy_cases").select("title,case_facts").eq("id", attempt.case_id).maybeSingle(),
-      supabase.from("advocacy_case_details").select("parties,claims,defenses,legal_references").eq("case_id", attempt.case_id).maybeSingle(),
-    ]);
-
-    const stageContext = multipleChoiceStages.map((stage: any) => {
-      const options = Array.isArray(stage.options) ? stage.options : [];
-      const submitted = answers[stage.id];
-      const selectedIndex = typeof submitted === "number"
-        ? submitted
-        : submitted?.selected_option_index ?? submitted?.option_index ?? submitted?.selectedOptionIndex;
-      return {
-        stage_number: stage.stage_number,
-        title: stage.title,
-        question: stage.prompt,
-        selected_answer: Number.isInteger(Number(selectedIndex)) ? options[Number(selectedIndex)] ?? null : null,
-      };
-    });
-
     const startedAt = new Date(attempt.started_at).getTime();
 
     const durationSeconds = Math.max(
