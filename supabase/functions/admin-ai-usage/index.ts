@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     if (!token) return json({ error: "يلزم تسجيل دخول المسؤول." }, 401)
     const url = Deno.env.get("SUPABASE_URL")
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || (() => { const keys = Deno.env.get("SUPABASE_SECRET_KEYS"); if (!keys) return null; try { return JSON.parse(keys).default || null } catch { return null } })()
     if (!url || !anonKey || !serviceKey) return json({ error: "إعدادات الخدمة غير مكتملة." }, 503)
 
     const userClient = createClient(url, anonKey)
