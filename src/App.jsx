@@ -17,7 +17,7 @@ function Header() {
         />
         <span>
           نهج القانوني
-          <small>المعرفة القانونية تبدأ بسؤال</small>
+          <small>من المعرفة إلى الأثر</small>
         </span>
       </Link>
       <nav>
@@ -35,7 +35,7 @@ function Shell({ children }) {
     <div className="site">
       <Header />
       {children}
-      <footer>© 2026 نهج القانوني · دقيقة قانونية</footer>
+      <footer>© 2026 نهج القانوني · المعرفة إلى الأثر</footer>
     </div>
   )
 }
