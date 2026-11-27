@@ -140,3 +140,9 @@
   .impact-indicator,.impact-recommendation{break-inside:avoid;border:1px solid #ddd!important;background:#fff!important}
   .impact-report-disclaimer{color:#333!important;background:#f5f5f5!important}
 }
+
+.advocacy-ai-result{margin-top:16px;padding:16px;border:1px solid rgba(217,189,125,.32);border-radius:12px;background:rgba(217,189,125,.06);text-align:right}
+.advocacy-ai-score{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 14px;border-bottom:1px solid rgba(217,189,125,.22)}
+.advocacy-ai-score small{color:#b7c3ca;font-size:11px}.advocacy-ai-score strong{color:var(--nahj-gold);font-size:27px}
+.advocacy-ai-result h3{font-size:14px;color:var(--nahj-gold);margin:18px 0 8px}
+.advocacy-ai-result p,.advocacy-ai-result li{font-size:12px;line-height:1.9;color:#c0cbd1}
