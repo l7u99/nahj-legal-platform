@@ -138,6 +138,12 @@ function Competitions() {
             <p>اقرأ وقائع القضية، حدّد التكييف، حلّل الأدلة، ثم اكتب مرافعتك الختامية.</p>
             <Link className="btn" to="/advocacy">استعراض مسابقات المرافعة ←</Link>
           </section>
+          <section className="card competition-feature">
+            <span className="gold">03 · الإدارة والتنظيم</span>
+            <h2>دخول المسؤولين</h2>
+            <p>الدخول إلى لوحة إدارة دقيقة قانونية ومتابعة مجموعات الأسئلة والمشاركات والإحصائيات.</p>
+            <Link className="btn" to="/admin">دخول المسؤولين ←</Link>
+          </section>
         </div>
         <div className="competition-footer"><Link to="/">← العودة إلى الرئيسية</Link></div>
       </main>
