@@ -22,17 +22,17 @@ serve(async (req) => {
 
     const body = await req.json()
     const portal = body?.portal
+    const mode = body?.mode === "report" ? "report" : "chat"
     const messages = body?.messages
     if (!portalGuidance[portal] || !Array.isArray(messages) || messages.length < 1 || messages.length > 16) {
       return new Response(JSON.stringify({ error: "بيانات الطلب غير صالحة." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
     const safeMessages = messages.filter((m: any) => ["user", "assistant"].includes(m?.role) && typeof m?.content === "string")
       .slice(-12).map((m: any) => ({ role: m.role, content: m.content.slice(0, 3000) }))
-    if (!safeMessages.length || safeMessages[safeMessages.length - 1].role !== "user") {
+    if (!safeMessages.length || (mode === "chat" && safeMessages[safeMessages.length - 1].role !== "user")) {
       return new Response(JSON.stringify({ error: "أرسل إجابتك أولًا." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } })
     }
 
-    const mode = body?.mode === "report" ? "report" : "chat"
     const model = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini"
     const reportSystem = `أنت محلل قياس أثر في منظومة نهج. حلل المحادثة كاملة وأنشئ تقريرًا أوليًا باللغة العربية، دون اختراع أي بيانات أو أرقام. استخدم null أو اذكر «غير متوفر» عند نقص البيانات. أعد JSON صالحًا فقط بهذه المفاتيح: title (عنوان مختصر)، executive_summary (ملخص تنفيذي)، context (وصف الحالة)، indicators (مصفوفة عناصر {name, value, interpretation, evidence}), strengths (مصفوفة نصوص)، gaps (مصفوفة نصوص)، recommendations (مصفوفة عناصر {action, priority, rationale}), data_quality (وصف كفاية البيانات)، limitations (مصفوفة نصوص)، follow_up (مصفوفة نصوص). لا تمنح تصنيف نجاح/فشل قطعيًا، ولا تعتبر المقترحات معايير معتمدة. لا تتضمن بيانات شخصية. مجال التقرير: ${portal}. توجيهات المجال: ${portalGuidance[portal]}`
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
