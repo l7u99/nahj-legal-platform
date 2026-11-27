@@ -117,60 +117,132 @@ const portalCards = [
 
 export function ImpactHome() {
   const access = useImpactAccess()
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    if (!access.allowed || !db) return
+    let alive = true
+    async function loadDashboard() {
+      setLoading(true)
+      setLoadError('')
+      const { data, error } = await db.from('impact_assessments')
+        .select('id,portal,title,report,status,created_at,updated_at')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (!alive) return
+      if (error) {
+        setLoadError('تعذر تحميل إحصائيات قياس الأثر. حاولي تحديث الصفحة.')
+        setReports([])
+      } else {
+        setReports(data || [])
+      }
+      setLoading(false)
+    }
+    loadDashboard()
+    return () => { alive = false }
+  }, [access.allowed])
+
   if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
+
+  const count = (portal) => reports.filter(row => row.portal === portal).length
+  const reviewed = reports.filter(row => row.status === 'reviewed').length
+  const draft = reports.filter(row => row.status === 'draft').length
+  const archived = reports.filter(row => row.status === 'archived').length
+  const portalSummary = [
+    { id: 'meetings', title: 'تقييم اللقاءات', desc: 'جودة التنظيم والتفاعل وتحقيق أهداف اللقاء', icon: '◷' },
+    { id: 'partners', title: 'تقييم الشركاء', desc: 'قيمة الشراكات والالتزام والأثر المشترك', icon: '◇' },
+    { id: 'teams', title: 'تقييم الفرق والأعضاء', desc: 'الأداء والإنجاز والتعاون والتطوير', icon: '◎' }
+  ]
+  const monthLabels = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date()
+    date.setDate(1)
+    date.setMonth(date.getMonth() - (5 - index))
+    return { key: `${date.getFullYear()}-${date.getMonth()}`, label: date.toLocaleDateString('ar-SA', { month: 'short' }), month: date.getMonth(), year: date.getFullYear() }
+  })
+  const monthly = monthLabels.map(month => ({
+    ...month,
+    total: reports.filter(row => {
+      const date = new Date(row.created_at)
+      return date.getMonth() === month.month && date.getFullYear() === month.year
+    }).length
+  }))
+  const maxMonthly = Math.max(1, ...monthly.map(item => item.total))
+
   return (
     <main className="impact-page">
-      <section className="impact-hero">
-        <div className="impact-orbit orbit-one" />
-        <div className="impact-orbit orbit-two" />
+      <section className="impact-portal-heading">
         <span className="eyebrow">NAHJ · IMPACT & SUSTAINABILITY</span>
-        <img className="impact-mark impact-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png`} alt="شعار نهج القانوني" />
-        <h1><em>أثَر</em> | منظومة قياس الأثر والاستدامة</h1>
-        <p>من قياس النشاط إلى فهم الأثر، ومن البيانات إلى قرارات تصنع فرقًا.</p>
+        <h1>لوحة قياس الأثر والاستدامة</h1>
+        <p>نظرة إحصائية على التقييمات والتقارير ومؤشرات الأداء عبر بوابات نهج.</p>
         <div className="impact-hero-actions">
-          <a className="impact-primary" href="#impact-portals">استكشف المنظومة <span>←</span></a>
-          <Link className="impact-assistant-link" to="/impact/meetings">افتح المساعد الذكي <span>✧</span></Link>
-          <span className="impact-live"><i /> منظومة تفاعلية</span>
-        </div>
-        <div className="impact-stats">
-          <div><strong>01</strong><span>منهجية قياس</span></div>
-          <div><strong>03</strong><span>بوابات متخصصة</span></div>
-          <div><strong>AI</strong><span>مساعد ذكي</span></div>
+          <Link className="impact-primary" to="/admin/impact">سجل التقارير ومراجعتها ←</Link>
+          <Link className="impact-assistant-link" to="/impact/meetings">فتح مساعد نهج الذكي بشكل منفصل ✧</Link>
         </div>
       </section>
 
-      <section className="impact-intro" id="impact-portals">
-        <div>
-          <span className="eyebrow">THE IMPACT FRAMEWORK</span>
-          <h2>كل تفاعل يترك أثرًا.<br /><em>والأثر يستحق أن يُقاس.</em></h2>
-        </div>
-        <p>اختر مجال القياس، وأجب عن أسئلة المساعد الذكي خطوة بخطوة. سيساعدك على تنظيم المعلومات، واكتشاف الفجوات، وصياغة قراءة عملية للأثر وفرص التحسين.</p>
+      {loadError && <div className="impact-error">{loadError}</div>}
+
+      <section className="impact-admin-stats">
+        <div><strong>{loading ? '—' : reports.length}</strong><span>إجمالي التقييمات والتقارير</span></div>
+        <div><strong>{loading ? '—' : reviewed}</strong><span>تقارير تمت مراجعتها</span></div>
+        <div><strong>{loading ? '—' : draft}</strong><span>مسودات بانتظار المراجعة</span></div>
+        <div><strong>{loading ? '—' : archived}</strong><span>تقارير مؤرشفة</span></div>
+      </section>
+
+      <section className="impact-intro">
+        <div><span className="eyebrow">IMPACT SCORECARD</span><h2>مؤشرات <em>المنظومة</em></h2></div>
+        <p>تُحدّث هذه الأرقام من التقارير المحفوظة فعليًا، ولا تعرض نتائج تقديرية أو بيانات غير مسجلة.</p>
       </section>
 
       <section className="impact-grid">
-        {portalCards.map((card) => (
-          <Link className="impact-card" to={`/impact/${card.id}`} key={card.id}>
-            <div className="impact-card-top"><span>{card.number}</span><b>{card.icon}</b></div>
-            <h3>{card.title}</h3>
-            <p>{card.desc}</p>
-            <div className="impact-tags">{card.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
-            <div className="impact-card-link">ابدأ القياس <span>←</span></div>
-          </Link>
+        {portalSummary.map(item => (
+          <article className="impact-card" key={item.id}>
+            <div className="impact-card-top"><span>{item.id === 'meetings' ? '01' : item.id === 'partners' ? '02' : '03'}</span><b>{item.icon}</b></div>
+            <h3>{item.title}</h3>
+            <p>{item.desc}</p>
+            <div className="impact-tags"><span>عدد التقارير المحفوظة</span></div>
+            <div className="impact-card-link"><strong>{loading ? '—' : count(item.id)}</strong> تقرير</div>
+          </article>
         ))}
       </section>
 
       <section className="impact-method">
         <div className="method-copy">
-          <span className="eyebrow">HOW IT WORKS</span>
-          <h2>من السؤال إلى <em>قرار أفضل</em></h2>
-          <p>تجربة موجهة لا تحتاج إلى خبرة مسبقة في قياس الأثر. المساعد يسألك، يرتب إجاباتك، ثم يقدم قراءة أولية قابلة للمراجعة.</p>
+          <span className="eyebrow">SUSTAINABILITY RADAR</span>
+          <h2>رادار <em>الاستدامة</em></h2>
+          <p>يعرض قراءة مجمعة لمؤشرات الاستدامة عند توفر بيانات وتقارير كافية.</p>
+          <small>{reports.length ? 'ستُبنى القراءة على المؤشرات المسجلة في التقارير المحفوظة.' : 'لا توجد تقارير محفوظة بعد؛ ستظهر المؤشرات هنا بعد تسجيل أول تقييم وحفظ تقريره.'}</small>
         </div>
         <div className="method-steps">
-          <div><b>01</b><span><strong>حدد المجال</strong><small>لقاء، شريك، أو فريق عمل</small></span></div>
-          <div><b>02</b><span><strong>أجب خطوة بخطوة</strong><small>أسئلة قصيرة بحسب سياقك</small></span></div>
-          <div><b>03</b><span><strong>استخرج قراءة الأثر</strong><small>مؤشرات وفجوات وفرص تحسين</small></span></div>
+          <div><b>01</b><span><strong>قياس اللقاءات</strong><small>{loading ? 'جارٍ التحميل…' : count('meetings') + ' تقارير محفوظة'}</small></span></div>
+          <div><b>02</b><span><strong>قياس الشراكات</strong><small>{loading ? 'جارٍ التحميل…' : count('partners') + ' تقارير محفوظة'}</small></span></div>
+          <div><b>03</b><span><strong>قياس الفرق</strong><small>{loading ? 'جارٍ التحميل…' : count('teams') + ' تقارير محفوظة'}</small></span></div>
         </div>
       </section>
+
+      <section className="impact-method">
+        <div className="method-copy">
+          <span className="eyebrow">EARLY WARNING & TREND</span>
+          <h2>مؤشر النشاط <em>خلال آخر 6 أشهر</em></h2>
+          <p>عدد التقارير التي تم حفظها في كل شهر، اعتمادًا على تاريخ إنشاء التقرير.</p>
+        </div>
+        <div className="method-steps">
+          {monthly.map(item => (
+            <div key={item.key}>
+              <b>{item.label}</b>
+              <span style={{ flex: 1 }}>
+                <strong>{loading ? '—' : item.total + ' تقرير'}</strong>
+                <span style={{ display: 'block', height: 7, marginTop: 7, borderRadius: 8, background: 'rgba(199,169,107,.16)', overflow: 'hidden' }}>
+                  <span style={{ display: 'block', width: loading ? '0%' : (item.total / maxMonthly * 100) + '%', height: '100%', background: '#c7a96b', borderRadius: 8 }} />
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="impact-back"><Link to="/">العودة إلى بوابة نهج الرئيسية ←</Link></div>
     </main>
   )
