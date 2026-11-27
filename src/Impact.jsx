@@ -2,6 +2,43 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { db } from './lib'
 
+function useImpactAccess() {
+  const [access, setAccess] = useState({ loading: true, allowed: false })
+  useEffect(() => {
+    if (!db) {
+      setAccess({ loading: false, allowed: false })
+      return
+    }
+    let alive = true
+    async function check() {
+      const { data: sessionData } = await db.auth.getSession()
+      const session = sessionData?.session
+      if (!session?.user?.id) {
+        if (alive) setAccess({ loading: false, allowed: false })
+        return
+      }
+      const { data, error } = await db.rpc('is_active_impact_member')
+      if (alive) setAccess({ loading: false, allowed: !error && data === true })
+    }
+    check()
+    const { data: { subscription } } = db.auth.onAuthStateChange(() => check())
+    return () => { alive = false; subscription.unsubscribe() }
+  }, [])
+  return access
+}
+
+function ImpactAccessNotice({ loading }) {
+  return (
+    <main className="impact-page">
+      <div className="impact-chat-card center">
+        <h1>{loading ? 'جارٍ التحقق من صلاحية الدخول…' : 'هذه المنظومة للأعضاء المعتمدين فقط'}</h1>
+        <p>{loading ? 'لحظة من فضلك.' : 'يلزم تسجيل الدخول بحساب عضو معتمد من إدارة نهج القانوني للوصول إلى بوابات أثَر والمساعد الذكي.'}</p>
+        {!loading && <Link className="btn" to="/admin">تسجيل الدخول للأعضاء ←</Link>}
+      </div>
+    </main>
+  )
+}
+
 const portalInfo = {
   meetings: {
     eyebrow: 'قياس جودة اللقاءات',
@@ -33,6 +70,8 @@ const portalCards = [
 ]
 
 export function ImpactHome() {
+  const access = useImpactAccess()
+  if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
   return (
     <main className="impact-page">
       <section className="impact-hero">
@@ -92,6 +131,7 @@ export function ImpactHome() {
 }
 
 export function ImpactPortal() {
+  const access = useImpactAccess()
   const { portal } = useParams()
   const info = portalInfo[portal]
   const [messages, setMessages] = useState([])
@@ -114,6 +154,7 @@ export function ImpactPortal() {
     { role: 'assistant', content: `مرحبًا بك في ${info?.title || 'بوابة قياس الأثر'}. سأرافقك خطوة بخطوة لفهم الحالة وقياسها. لنبدأ: ${info?.starters?.[0] || 'ما المجال الذي ترغب في قياس أثره؟'}` }
   ], [messages, info])
 
+  if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
   if (!info) return <main className="impact-page"><div className="impact-chat-card"><h1>البوابة غير موجودة</h1><Link to="/impact">العودة إلى المنظومة</Link></div></main>
 
   async function sendMessage(event) {
@@ -271,6 +312,7 @@ export function ImpactPortal() {
 
 
 export function ImpactAdmin() {
+  const access = useImpactAccess()
   const [session, setSession] = useState(null)
   const [reports, setReports] = useState([])
   const [selected, setSelected] = useState(null)
@@ -329,6 +371,8 @@ export function ImpactAdmin() {
     reviewed: reports.filter(row => row.status === 'reviewed').length,
     archived: reports.filter(row => row.status === 'archived').length
   }
+
+  if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
 
   if (!session) return (
     <main className="impact-page">
