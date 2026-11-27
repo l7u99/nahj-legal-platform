@@ -39,11 +39,12 @@ export function ImpactHome() {
         <div className="impact-orbit orbit-one" />
         <div className="impact-orbit orbit-two" />
         <span className="eyebrow">NAHJ · IMPACT & SUSTAINABILITY</span>
-        <div className="impact-mark">نـ</div>
+        <img className="impact-mark impact-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png`} alt="شعار نهج القانوني" />
         <h1><em>أثَر</em> | منظومة قياس الأثر والاستدامة</h1>
         <p>من قياس النشاط إلى فهم الأثر، ومن البيانات إلى قرارات تصنع فرقًا.</p>
         <div className="impact-hero-actions">
           <a className="impact-primary" href="#impact-portals">استكشف المنظومة <span>←</span></a>
+          <Link className="impact-assistant-link" to="/impact/meetings">افتح المساعد الذكي <span>✧</span></Link>
           <span className="impact-live"><i /> منظومة تفاعلية</span>
         </div>
         <div className="impact-stats">
