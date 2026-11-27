@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       .select("active")
       .eq("user_id", auth.user.id)
       .maybeSingle()
-    if (adminError || !adminRow?.active) return json({ error: "هذه البوابة متاحة للمسؤولين النشطين فقط." }, 403)
+    if (adminError || !(adminRow as { active?: boolean } | null)?.active) return json({ error: "هذه البوابة متاحة للمسؤولين النشطين فقط." }, 403)
 
     const body = await req.json()
     const portal = body?.portal
