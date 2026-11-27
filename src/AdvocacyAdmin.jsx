@@ -192,6 +192,8 @@ export default function AdvocacyAdmin() {
   const [submissions, setSubmissions] = useState([])
   const [allSubmissions, setAllSubmissions] = useState([])
   const [selectedSubmission, setSelectedSubmission] = useState(null)
+  const [aiEvaluating, setAiEvaluating] = useState(false)
+  const [aiEvaluation, setAiEvaluation] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -221,6 +223,31 @@ export default function AdvocacyAdmin() {
   }
 
   useEffect(() => { if (session) loadCases() }, [session])
+  async function requestAiEvaluation() {
+    if (!selectedSubmission || aiEvaluating) return
+    setAiEvaluating(true)
+    setAiEvaluation(null)
+    setError('')
+    const caseInfo = cases.find(item => item.id === selectedSubmission.case_id)
+    try {
+      const { data, error } = await db.functions.invoke('evaluate-advocacy', {
+        body: {
+          submission_id: selectedSubmission.id,
+          case_title: caseInfo?.title || '',
+          case_facts: caseInfo?.case_facts || '',
+          answers: selectedSubmission.answers || [],
+          final_argument: selectedSubmission.final_argument || ''
+        }
+      })
+      if (error || !data?.evaluation) throw new Error(data?.error || error?.message || 'تعذر تقييم المرافعة.')
+      setAiEvaluation(data.evaluation)
+    } catch (err) {
+      setError(err.message || 'تعذر تنفيذ التقييم.')
+    } finally {
+      setAiEvaluating(false)
+    }
+  }
+
 
   async function createCase(event) {
     event.preventDefault(); setError(''); setNotice('')
@@ -567,8 +594,17 @@ export default function AdvocacyAdmin() {
             <p style={{whiteSpace:'pre-wrap'}}>{selectedSubmission.final_argument}</p>
             <p>الدرجة الموضوعية: {selectedSubmission.objective_score} / 15</p>
             <p>درجة المرافعة: {selectedSubmission.ai_score ?? 'لم تُقيّم بعد'} / 10</p>
-            <p>ملاحظات التقييم: {selectedSubmission.ai_feedback ? JSON.stringify(selectedSubmission.ai_feedback) : 'لا توجد'}</p>
-            <button className="btn secondary" type="button" onClick={() => setSelectedSubmission(null)}>إغلاق التفاصيل</button>
+            <p>ملاحظات التقييم المحفوظة: {selectedSubmission.ai_feedback ? JSON.stringify(selectedSubmission.ai_feedback) : 'لا توجد'}</p>
+            <button className="btn" type="button" disabled={aiEvaluating} onClick={requestAiEvaluation}>{aiEvaluating ? 'جارٍ تحليل المرافعة…' : 'طلب تقييم أولي بالذكاء الاصطناعي'}</button>
+            {aiEvaluation && <div className="note" style={{textAlign:'right', marginTop:14}}>
+              <h4>نتيجة التقييم الأولي · {aiEvaluation.score} / 10</h4>
+              <p>{aiEvaluation.rationale}</p>
+              <b>نقاط القوة</b><ul>{(aiEvaluation.strengths || []).map((item, index) => <li key={index}>{item}</li>)}</ul>
+              <b>فرص التحسين</b><ul>{(aiEvaluation.improvements || []).map((item, index) => <li key={index}>{item}</li>)}</ul>
+              <small>{aiEvaluation.disclaimer || 'تقييم مساعد غير معتمد، ويستلزم مراجعة بشرية.'}</small>
+              <p className="muted">هذه النتيجة معاينة فقط ولا تُحفظ ولا تغيّر الدرجة النهائية أو حالة المشاركة.</p>
+            </div>}
+            <button className="btn secondary" type="button" onClick={() => { setSelectedSubmission(null); setAiEvaluation(null) }}>إغلاق التفاصيل</button>
           </article>}
           <div className="note">اعتماد التقييم ونشر النتائج غير مفعّلين بعد؛ يحتاجان إلى وظيفة خادمية وسياسة صلاحيات إضافية قبل إتاحتهما.</div>
         </section>
