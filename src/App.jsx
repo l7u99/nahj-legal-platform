@@ -23,7 +23,6 @@ function Header() {
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/competitions">المسابقات</Link>
-        <Link to="/impact">قياس الأثر</Link>
       </nav>
     </header>
   )
@@ -74,85 +73,49 @@ function Home() {
   }, [])
   return (
     <Shell>
-      <main className="nahj-home">
-        <section className="nahj-home-hero">
-          <div className="nahj-home-copy">
+      <main className="home-v2">
+        <section className="home-hero">
+          <div className="home-hero-copy">
             <span className="eyebrow">NAHJ LEGAL · KNOWLEDGE TO IMPACT</span>
-            <div className="nahj-home-kicker"><span /> منصة معرفية وتجربة تصنع الفرق</div>
-            <h1>نرتقي بالمعرفة،<br /><em>ونصنع أثرًا يستمر.</em></h1>
-            <p>نهج القانوني منظومة تجمع التجربة القانونية التفاعلية، والتطوير المهني، وقياس الأثر؛ لتحويل المعرفة إلى ممارسة، والإنجاز إلى قيمة مستدامة.</p>
-            <div className="nahj-home-actions">
-              <Link className="nahj-btn-primary" to="/competitions">اكتشف تجارب نهج <span>←</span></Link>
-              <Link className="nahj-btn-quiet" to="/impact">تعرّف على أثَر</Link>
+            <h1>من المعرفة القانونية<br /><em>إلى أثرٍ يُصنع.</em></h1>
+            <p>منصة نهج القانوني؛ مساحة للمنافسة والتعلّم، ومنظومة لقياس الأثر والاستدامة وتطوير جودة العمل.</p>
+            <div className="home-actions">
+              <Link className="btn" to="/competitions">اكتشف المسابقات ←</Link>
             </div>
-            <div className="nahj-home-proof"><span>معرفة موثوقة</span><i /><span>تجربة تطبيقية</span><i /><span>أثر قابل للقياس</span></div>
           </div>
-          <div className="nahj-home-visual" aria-hidden="true">
-            <div className="nahj-visual-orbit orbit-large" />
-            <div className="nahj-visual-orbit orbit-small" />
-            <div className="nahj-visual-glow" />
-            <img src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`} alt="" />
-            <span className="nahj-visual-caption">KNOWLEDGE · PRACTICE · IMPACT</span>
+          <div className="home-hero-art" aria-hidden="true">
+            <div className="hero-ring ring-a" /><div className="hero-ring ring-b" />
+            <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
           </div>
         </section>
-
-        <section className="nahj-principles" aria-label="مرتكزات نهج">
-          <div><b>01</b><span><strong>المعرفة</strong><small>محتوى قانوني موثوق</small></span></div>
-          <div><b>02</b><span><strong>الممارسة</strong><small>تجارب تحاكي الواقع</small></span></div>
-          <div><b>03</b><span><strong>التطوير</strong><small>تعلم وتحسين مستمر</small></span></div>
-          <div><b>04</b><span><strong>الأثر</strong><small>نتائج قابلة للقياس</small></span></div>
+        <section className="home-section-head">
+          <div><span className="eyebrow">EXPLORE NAHJ</span><h2>بوابات نهج</h2></div>
+          <p>اختر المسار الذي يناسب هدفك وابدأ تجربتك.</p>
         </section>
-
-        <section className="nahj-section-intro">
-          <div><span className="eyebrow">EXPLORE OUR ECOSYSTEM</span><h2>منظومة واحدة،<br /><em>ومسارات تصنع الفرق.</em></h2></div>
-          <p>ابدأ من المسار الذي يناسبك؛ سواء كنت تبحث عن تحدٍ قانوني، أو تجربة تطبيقية، أو أدوات لقياس أثر العمل وتطويره.</p>
-        </section>
-
-        <section className="nahj-products-grid">
-          <article className="nahj-product-card product-knowledge">
-            <div className="nahj-product-meta"><span>01 / KNOWLEDGE</span><b>§</b></div>
-            <div className="nahj-product-icon">✳</div>
-            <h3>دقيقة قانونية</h3>
-            <p>مساحة معرفية تفاعلية تختبر فهم الأنظمة والمواد القانونية، وتربط الإجابة بالتفسير والمصدر.</p>
-            {questionSet && <div className="nahj-featured-challenge"><small>التحدي المنشور حاليًا</small><strong>{questionSet.title}</strong><Link to={'/participate/' + questionSet.id}>ابدأ التحدي ←</Link></div>}
-            <Link className="nahj-product-link" to="/competitions">استكشف التحديات <span>←</span></Link>
+        <section className="gateway-grid">
+          <article className="gateway-card gateway-competition">
+            <div className="gateway-top"><span>01 / COMPETITIONS</span><b>⚖</b></div>
+            <h3>بوابة المسابقات</h3>
+            <p>تجارب قانونية تفاعلية تختبر المعرفة والتحليل والاستدلال وصياغة المرافعة.</p>
+            <div className="gateway-links">
+              <Link to="/competitions">الدخول إلى المسابقات <span>←</span></Link>
+              {ready && questionSet && <Link to={'/participate/' + questionSet.id}>التحدي الأسبوعي الحالي <span>←</span></Link>}
+              <Link to="/advocacy">مسابقة المرافعة القانونية <span>←</span></Link>
+              <Link to="/archive">أرشيف الأسئلة <span>←</span></Link>
+            </div>
           </article>
-
-          <article className="nahj-product-card product-practice">
-            <div className="nahj-product-meta"><span>02 / PRACTICE</span><b>⚖</b></div>
-            <div className="nahj-product-icon">⌘</div>
-            <h3>المرافعة القانونية</h3>
-            <p>تجربة تطبيقية تنقلك من قراءة الوقائع إلى التكييف وتحليل الأدلة وبناء الحجة وصياغة المرافعة.</p>
-            <div className="nahj-product-tags"><span>تحليل</span><span>استدلال</span><span>صياغة</span></div>
-            <Link className="nahj-product-link" to="/advocacy">اكتشف تجربة المرافعة <span>←</span></Link>
-          </article>
-
-          <article className="nahj-product-card product-athar">
-            <div className="nahj-product-meta"><span>03 / IMPACT</span><b>✧</b></div>
-            <div className="nahj-product-icon">✧</div>
-            <h3>أثَر</h3>
-            <p>منظومة لقياس أثر اللقاءات والشراكات والفرق، وتحويل البيانات الموثقة إلى مؤشرات وقرارات وفرص استدامة.</p>
-            <div className="nahj-product-tags"><span>قياس الأثر</span><span>الاستدامة</span><span>التحليل</span></div>
-            <Link className="nahj-product-link" to="/impact">اكتشف منظومة أثَر <span>←</span></Link>
+          <article className="gateway-card gateway-impact">
+            <div className="gateway-top"><span>02 / IMPACT & SUSTAINABILITY</span><b>✧</b></div>
+            <h3>منظومة قياس الأثر والاستدامة</h3>
+            <p>منظومة ذكية لتحليل جودة اللقاءات والشراكات وأداء الفرق، وتحويل البيانات إلى فرص تطوير وقرارات أوضح.</p>
+            <div className="gateway-pills"><span>تقييم اللقاءات</span><span>تقييم الشركاء</span><span>تقييم الفرق</span></div>
+            <Link className="gateway-enter" to="/impact">استكشف المنظومة <span>←</span></Link>
           </article>
         </section>
 
-        <section className="nahj-athar-feature">
-          <div className="nahj-athar-art" aria-hidden="true"><div className="nahj-athar-orbit" /><div className="nahj-athar-core">أثَر<small>IMPACT INTELLIGENCE</small></div><span className="athar-art-label">MEASURE · LEARN · SUSTAIN</span></div>
-          <div className="nahj-athar-copy">
-            <span className="eyebrow">A SIGNATURE NAHJ PLATFORM</span>
-            <h2>الأثر لا يُقاس بما فعلناه فقط،<br /><em>بل بما تغيّر بسببه.</em></h2>
-            <p>تمنح أثَر الجهات والفرق رؤية أوضح لأداء المبادرات وجودة المخرجات واستدامة النتائج، عبر تقارير منظمة ومؤشرات تستند إلى بيانات وأدلة فعلية.</p>
-            <ul><li>قياس جودة اللقاءات ومخرجاتها</li><li>تحليل قيمة الشراكات واستمراريتها</li><li>قراءة أداء الفرق وفرص التطوير</li></ul>
-            <Link className="nahj-btn-primary" to="/impact">انتقل إلى أثَر <span>←</span></Link>
-          </div>
-        </section>
-
-        <section className="nahj-closing">
-          <span className="eyebrow">NAHJ LEGAL · OUR DIRECTION</span>
-          <h2>المعرفة بداية الطريق،<br /><em>والأثر هو ما يبقى.</em></h2>
-          <p>نؤمن أن التطوير الحقيقي يبدأ بفهم أعمق، وتجربة أفضل، وقياس صادق لما تحقق.</p>
-          <Link to="/competitions">ابدأ رحلتك مع نهج ←</Link>
+        <section className="home-bottom-note">
+          <div><span className="eyebrow">A BETTER WAY TO MEASURE</span><h2>لا نكتفي بما أُنجز؛<br /><em>نسأل عن الأثر الذي تحقق.</em></h2></div>
+          <p>نهج يجمع بين المعرفة، والتجربة، والتحليل؛ ليجعل التطوير مستمرًا والأثر أكثر وضوحًا.</p>
         </section>
       </main>
     </Shell>
