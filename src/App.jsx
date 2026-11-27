@@ -1077,7 +1077,7 @@ export default function App() {
   if (path === '/competitions') return <Competitions />
   if (path.startsWith('/rate/')) return <ImpactSurveyPublic token={path.slice('/rate/'.length).split('/')[0]} />
   if (path === '/impact') return <Shell><ImpactHome /></Shell>
-  if (path === '/impact/meetings' || path === '/impact/teams' || path === '/impact/partners') return <Shell><ImpactCategoryDashboard category={path.split('/')[2]} /></Shell>
+  if (path === '/impact/meetings' || path === '/impact/teams' || path === '/impact/partners' || path === '/impact/general') return <Shell><ImpactCategoryDashboard category={path.split('/')[2]} /></Shell>
   if (path.startsWith('/impact/assistant/')) return <Shell><ImpactPortal portal={path.slice('/impact/assistant/'.length).split('/')[0]} /></Shell>
   if (path === '/admin/impact/surveys') return <Shell><ImpactSurveyAdmin /></Shell>
   if (path.startsWith('/impact/')) return <Shell><ImpactPortal portal={path.slice('/impact/'.length).split('/')[0]} /></Shell>
