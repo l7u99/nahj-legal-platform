@@ -344,7 +344,7 @@ export default function AdvocacyAdmin() {
             <h4>إجابات المراحل</h4><pre style={{whiteSpace:'pre-wrap'}}>{JSON.stringify(row.answers, null, 2)}</pre>
             <h4>المرافعة الختامية</h4><p style={{whiteSpace:'pre-wrap'}}>{row.final_argument || 'لم تُسجل مرافعة'}</p>
             <p>الدرجة الموضوعية: {row.objective_score} / 15 · المرافعة: بانتظار التدقيق البشري</p>
-            <p>ملخص التقييم: {row.ai_feedback?.summary || 'لم يكتمل التقييم بعد'}</p>
+            <p className="muted">لم يُفعّل التقييم الآلي؛ المرافعة بانتظار التدقيق البشري.</p>
           </details>
         </article>) : <p>لا توجد مشاركات مسجلة حتى الآن.</p>}
       </section>
@@ -528,8 +528,7 @@ export default function AdvocacyAdmin() {
           <h2>إحصائيات المرافعة</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
             <div className="mini"><b>إجمالي المتسابقين</b><h2>{submissions.length}</h2></div>
-            <div className="mini"><b>بانتظار المراجعة</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-            <div className="mini"><b>بانتظار التدقيق</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
+            <div className="mini"><b>بانتظار المراجعة البشرية</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
             <div className="mini"><b>مشاركات معتمدة</b><h2>{submissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
             
           </div>
