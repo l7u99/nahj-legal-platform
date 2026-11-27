@@ -467,3 +467,33 @@
 .athar-text-responses{grid-column:1/-1;display:grid;gap:8px}
 .athar-text-responses p{margin:0;padding:10px 12px;border-right:2px solid #b99a60;background:rgba(255,255,255,.035);border-radius:7px;color:#c4cdd2;font-size:10px;line-height:1.9;overflow-wrap:anywhere}
 .athar-text-responses>small{color:#91a2ad;font-size:10px}
+
+
+/* Nahj home refinement: preserve the established identity, colors, logo and copy */
+.home-v2{max-width:1160px}
+.home-hero{gap:clamp(28px,5vw,72px);align-items:center}
+.home-hero-copy{max-width:650px}
+.home-hero-art{min-height:360px}
+.hero-logo{object-fit:contain;filter:drop-shadow(0 16px 28px rgba(0,0,0,.22))}
+.home-section-head{margin-top:58px;align-items:end}
+.gateway-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
+.gateway-card{min-height:320px;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.gateway-card:hover{transform:translateY(-4px);border-color:rgba(217,189,125,.55);box-shadow:0 18px 42px rgba(0,0,0,.16)}
+.gateway-card h3{line-height:1.5}
+.gateway-card>p{max-width:520px}
+.gateway-pills{margin-top:10px}
+.gateway-enter{min-height:44px}
+.home-bottom-note{margin-top:62px}
+.athar-category-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.athar-dimension-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.athar-dimension-card{min-height:150px;padding:17px;border:1px solid var(--nahj-line);border-radius:13px;background:linear-gradient(145deg,#192f40,#10212e);display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+.athar-dimension-card>span{font-size:9px;color:var(--nahj-gold)}
+.athar-dimension-card h3{font-size:14px;margin:0;color:#f0ede7}
+.athar-dimension-card strong{font-size:22px;color:#dfc88e}
+.athar-dimension-card small{font-size:10px;line-height:1.8;color:#91a2ad}
+.athar-survey-filter{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 17px;padding:12px;border:1px solid var(--nahj-line);border-radius:11px;background:rgba(20,40,56,.48)}
+.athar-survey-filter label{font-size:11px;color:#c5d0d5}
+.athar-survey-filter select{min-width:190px;max-width:100%;background:#102331;color:#f0ede7;border:1px solid rgba(217,189,125,.3);border-radius:8px;padding:9px 12px;font:inherit;font-size:11px}
+@media(max-width:1000px){.athar-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.gateway-grid{grid-template-columns:1fr}.home-hero-art{min-height:250px}.athar-category-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.athar-dimension-grid{grid-template-columns:1fr}.athar-survey-filter{align-items:stretch;flex-direction:column}.athar-survey-filter select{width:100%}}
