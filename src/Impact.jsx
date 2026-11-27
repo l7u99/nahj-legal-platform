@@ -132,7 +132,7 @@ export function ImpactHome() {
         db.from('impact_assessments').select('id,portal,title,status,created_at').order('created_at', { ascending: false }).limit(500),
         db.from('impact_surveys').select('id,title,status,category,public_token,created_at').order('created_at', { ascending: false }).limit(250),
         db.from('impact_survey_responses').select('id,survey_id,answers,submitted_at').order('submitted_at', { ascending: false }).limit(2000),
-        db.from('impact_survey_questions').select('id,survey_id,question_type')
+        db.from('impact_survey_questions').select('id,survey_id,question_type,dimension')
       ])
       if (!alive) return
       if (reportResult.error || surveyResult.error || responseResult.error || questionResult.error) setLoadError('تعذر تحديث بعض البيانات. بقيت لوحة المؤشرات ظاهرة، ويمكن إعادة المحاولة.')
@@ -147,14 +147,26 @@ export function ImpactHome() {
   const activeSurveys = surveys.filter(item => item.status === 'published').length
   const reviewed = reports.filter(item => item.status === 'reviewed').length
   const draft = reports.filter(item => item.status === 'draft').length
-  const ratingQuestionIds = new Set(questions.filter(item => item.question_type === 'rating').map(item => item.id))
-  const ratingValues = responses.flatMap(row => Object.entries(row.answers || {}).filter(([id, value]) => ratingQuestionIds.has(id) && Number.isFinite(Number(value))).map(([, value]) => Number(value)))
+  const ratingQuestionDimensions = new Map(questions.filter(item => item.question_type === 'rating').map(item => [item.id, item.dimension]))
+  const ratingValues = responses.flatMap(row => Object.entries(row.answers || {}).filter(([id, value]) => ratingQuestionDimensions.has(id) && Number.isFinite(Number(value))).map(([, value]) => Number(value)))
   const averageRating = ratingValues.length ? (ratingValues.reduce((sum, value) => sum + value, 0) / ratingValues.length).toFixed(1) : '0.0'
   const categoryLabels = { meetings: 'اللقاءات', partners: 'الشراكات', teams: 'الفرق', general: 'عام' }
   const categoryRows = ['meetings','partners','teams','general'].map(category => ({ category, label: categoryLabels[category], total: surveys.filter(s => s.category === category).length, replies: responses.filter(r => surveys.some(s => s.id === r.survey_id && s.category === category)).length }))
   const monthly = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5-index)); return { key: date.getFullYear()+'-'+date.getMonth(), label: date.toLocaleDateString('ar-SA',{month:'short'}), total: responses.filter(row => { const d = new Date(row.submitted_at); return d.getFullYear()===date.getFullYear() && d.getMonth()===date.getMonth() }).length } })
   const maxMonthly = Math.max(1, ...monthly.map(item => item.total))
-  const dimensions = [['المؤسسية','الحوكمة والسياسات والتوثيق'],['التشغيلية','كفاءة التنفيذ واستمرارية العمليات'],['المعرفية','نقل المعرفة وحفظ الخبرات'],['الشراكات','جودة التعاون والقيمة المشتركة'],['التطويرية','التعلم والتحسين وقياس التقدم']]
+  const dimensions = [
+    { id: 'institutional', name: 'المؤسسية', description: 'الحوكمة والسياسات والتوثيق' },
+    { id: 'operational', name: 'التشغيلية', description: 'كفاءة التنفيذ واستمرارية العمليات' },
+    { id: 'knowledge', name: 'المعرفية', description: 'نقل المعرفة وحفظ الخبرات' },
+    { id: 'partnerships', name: 'الشراكات', description: 'جودة التعاون والقيمة المشتركة' },
+    { id: 'development', name: 'التطويرية', description: 'التعلم والتحسين وقياس التقدم' }
+  ].map(item => {
+    const values = responses.flatMap(row => Object.entries(row.answers || {})
+      .filter(([id, value]) => ratingQuestionDimensions.get(id) === item.id && Number.isFinite(Number(value)))
+      .map(([, value]) => Number(value)))
+    const score = values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length / 5 * 100) : 0
+    return { ...item, score, count: values.length }
+  })
   return (
     <main className="impact-page athar-dashboard">
       <div className="impact-breadcrumb"><Link to="/">الرئيسية</Link><span>/</span><b>أثَر · لوحة المؤشرات</b></div>
@@ -172,7 +184,7 @@ export function ImpactHome() {
         <article className="athar-panel"><div className="athar-panel-heading"><div><span className="eyebrow">SURVEY DISTRIBUTION</span><h3>التقييم حسب المجال</h3></div></div><div className="athar-category-list">{categoryRows.map(item=><div className="athar-category-row" key={item.category}><div><b>{item.label}</b><small>{item.total} استبيان · {item.replies} استجابة</small></div><strong>{item.replies.toLocaleString('ar-SA')}</strong><span><i style={{width:(responses.length?item.replies/responses.length*100:0)+'%'}} /></span></div>)}</div>{!loading&&surveys.length===0&&<div className="athar-chart-empty">لم تُنشأ استبيانات بعد. ابدئي بإنشاء أول استبيان.</div>}</article>
       </section>
       <section className="athar-dashboard-section-head"><div><span className="eyebrow">SUSTAINABILITY FRAMEWORK</span><h2>أبعاد الاستدامة</h2></div><span className="athar-panel-unit">نموذج قياس من 5 أبعاد</span></section>
-      <section className="athar-sustainability-grid">{dimensions.map(([name,description],index)=><article className="athar-dimension-card" key={name}><div><b>0{index+1}</b><span>0%</span></div><h3>{name}</h3><p>{description}</p><div className="athar-dimension-track"><i style={{width:'0%'}} /></div><small>بانتظار بيانات القياس</small></article>)}</section>
+      <section className="athar-sustainability-grid">{dimensions.map((item,index)=><article className="athar-dimension-card" key={item.id}><div><b>0{index+1}</b><span>{item.score}%</span></div><h3>{item.name}</h3><p>{item.description}</p><div className="athar-dimension-track"><i style={{width:item.score+'%'}} /></div><small>{item.count ? item.count+' إجابة تقييمية' : 'بانتظار بيانات القياس'}</small></article>)}</section>
       <section className="athar-next-step"><div><span className="eyebrow">START MEASURING</span><h2>{surveys.length?'تابعي قياس الأثر وتطويره':'ابدئي بأول خطوة نحو قياس الأثر'}</h2><p>أنشئي استبيانًا، شاركي رابطه مع الحضور، وستظهر النتائج تلقائيًا هنا دون إدخال يدوي.</p></div><Link className="impact-primary" to="/admin/impact/surveys">إنشاء استبيان جديد ←</Link></section>
     </main>
   )
@@ -492,9 +504,9 @@ export function ImpactSurveyAdmin() {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('meetings')
   const [questions, setQuestions] = useState([
-    { prompt: 'كيف تقيّم جودة التجربة بشكل عام؟', type: 'rating', options: '', required: true },
-    { prompt: 'ما أكثر جانب أعجبك؟', type: 'text', options: '', required: false },
-    { prompt: 'ما الذي تقترح تحسينه؟', type: 'text', options: '', required: false }
+    { prompt: 'كيف تقيّم جودة التجربة بشكل عام؟', type: 'rating', options: '', dimension: 'operational', required: true },
+    { prompt: 'ما أكثر جانب أعجبك؟', type: 'text', options: '', dimension: 'knowledge', required: false },
+    { prompt: 'ما الذي تقترح تحسينه؟', type: 'text', options: '', dimension: 'development', required: false }
   ])
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState('')
@@ -543,7 +555,7 @@ export function ImpactSurveyAdmin() {
     const questionRows = questions.map((item, index) => ({
       survey_id: survey.id, prompt: item.prompt.trim(), question_type: item.type,
       options: item.type === 'choice' ? item.options.split(',').map(value => value.trim()).filter(Boolean) : [],
-      is_required: item.required, position: index + 1
+      is_required: item.required, dimension: item.dimension, position: index + 1
     }))
     const { error: questionsError } = await db.from('impact_survey_questions').insert(questionRows)
     if (questionsError) {
@@ -596,11 +608,11 @@ export function ImpactSurveyAdmin() {
           <label>عنوان الاستبيان<input value={title} onChange={event => setTitle(event.target.value)} maxLength="180" placeholder="مثال: تقييم لقاء التطوير القانوني" required /></label>
           <label>وصف مختصر<textarea value={description} onChange={event => setDescription(event.target.value)} rows="2" placeholder="وضّحي للمشارك الغرض من التقييم…" /></label>
           <label>مجال التقييم<select value={category} onChange={event => setCategory(event.target.value)}><option value="meetings">اللقاءات والفعاليات</option><option value="partners">الشراكات</option><option value="teams">الفرق والأعضاء</option><option value="general">تقييم عام</option></select></label>
-          <div className="athar-question-builder-head"><h3>أسئلة الاستبيان</h3><button type="button" className="impact-outline-btn" onClick={() => setQuestions(current => [...current, { prompt: '', type: 'rating', options: '', required: true }])}>+ إضافة سؤال</button></div>
+          <div className="athar-question-builder-head"><h3>أسئلة الاستبيان</h3><button type="button" className="impact-outline-btn" onClick={() => setQuestions(current => [...current, { prompt: '', type: 'rating', options: '', dimension: 'operational', required: true }])}>+ إضافة سؤال</button></div>
           {questions.map((question, index) => <div className="athar-question-editor" key={index}>
             <div className="athar-question-editor-title"><b>السؤال {index + 1}</b>{questions.length > 1 && <button type="button" onClick={() => setQuestions(current => current.filter((_, i) => i !== index))}>حذف</button>}</div>
             <input value={question.prompt} onChange={event => updateQuestion(index, 'prompt', event.target.value)} placeholder="اكتبي السؤال هنا" maxLength="500" required />
-            <div className="athar-question-editor-options"><select value={question.type} onChange={event => updateQuestion(index, 'type', event.target.value)}><option value="rating">تقييم من 1 إلى 5</option><option value="choice">اختيار من متعدد</option><option value="text">إجابة نصية</option></select><label className="athar-required-toggle"><input type="checkbox" checked={question.required} onChange={event => updateQuestion(index, 'required', event.target.checked)} /> إلزامي</label></div>
+            <div className="athar-question-editor-options"><select value={question.type} onChange={event => updateQuestion(index, 'type', event.target.value)}><option value="rating">تقييم من 1 إلى 5</option><option value="choice">اختيار من متعدد</option><option value="text">إجابة نصية</option></select><select value={question.dimension} onChange={event => updateQuestion(index, 'dimension', event.target.value)} aria-label="بُعد الاستدامة"><option value="institutional">المؤسسية</option><option value="operational">التشغيلية</option><option value="knowledge">المعرفية</option><option value="partnerships">الشراكات</option><option value="development">التطويرية</option></select><label className="athar-required-toggle"><input type="checkbox" checked={question.required} onChange={event => updateQuestion(index, 'required', event.target.checked)} /> إلزامي</label></div>
             {question.type === 'choice' && <input value={question.options} onChange={event => updateQuestion(index, 'options', event.target.value)} placeholder="الخيارات مفصولة بفاصلة" required />}
           </div>)}
           <button className="impact-primary-btn athar-create-button" type="submit" disabled={saving}>{saving ? 'جارٍ إنشاء الاستبيان…' : 'حفظ الاستبيان كمسودة'}</button>
