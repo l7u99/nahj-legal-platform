@@ -24,6 +24,7 @@ function Header() {
         <Link to="/">الرئيسية</Link>
         <Link to="/competitions">المسابقات</Link>
         <Link to="/impact">قياس الأثر</Link>
+        <Link to="/impact/meetings">المساعد الذكي</Link>
         <Link to="/admin">الإدارة</Link>
       </nav>
     </header>
@@ -88,7 +89,7 @@ function Home() {
           </div>
           <div className="home-hero-art" aria-hidden="true">
             <div className="hero-ring ring-a" /><div className="hero-ring ring-b" />
-            <div className="hero-emblem">نـ</div><span className="hero-art-caption">NAHJ · 2026</span>
+            <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
           </div>
         </section>
         <section className="home-section-head">
@@ -114,6 +115,22 @@ function Home() {
             <div className="gateway-pills"><span>تقييم اللقاءات</span><span>تقييم الشركاء</span><span>تقييم الفرق</span></div>
             <Link className="gateway-enter" to="/impact">استكشف المنظومة <span>←</span></Link>
           </article>
+        </section>
+
+        <section className="home-portals-section">
+          <div className="home-section-head">
+            <div><span className="eyebrow">ATHAR · IMPACT PORTALS</span><h2>بوابات منظومة أثَر</h2></div>
+            <p>البوابات متاحة للبدء حتى لو لم تُسجّل أي تقييمات بعد.</p>
+          </div>
+          <div className="home-portals-grid">
+            <Link className="home-portal-card" to="/impact/meetings"><span>01 · اللقاءات</span><strong>تقييم اللقاءات</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
+            <Link className="home-portal-card" to="/impact/partners"><span>02 · الشراكات</span><strong>تقييم الشركاء</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
+            <Link className="home-portal-card" to="/impact/teams"><span>03 · الفرق</span><strong>تقييم الفرق والأعضاء</strong><small>عدد التقييمات: 0</small><b>ابدأ القياس ←</b></Link>
+          </div>
+          <div className="home-ai-callout">
+            <div><span className="eyebrow">POWERED BY OPENAI</span><h3>مساعد أثَر الذكي</h3><p>مساعد تفاعلي يحاورك خطوة بخطوة، وينظم البيانات ويُعدّ تقريرًا أوليًا عن الأثر وفرص التحسين.</p></div>
+            <Link to="/impact/meetings">افتح المساعد الذكي ←</Link>
+          </div>
         </section>
         <section className="home-bottom-note">
           <div><span className="eyebrow">A BETTER WAY TO MEASURE</span><h2>لا نكتفي بما أُنجز؛<br /><em>نسأل عن الأثر الذي تحقق.</em></h2></div>
