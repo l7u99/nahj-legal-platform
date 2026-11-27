@@ -526,11 +526,12 @@ export default function AdvocacyAdmin() {
 
         <section className="card">
           <h2>إحصائيات المرافعة</h2>
-          <div className="cols">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}}>
             <div className="mini"><b>إجمالي المتسابقين</b><h2>{submissions.length}</h2></div>
             <div className="mini"><b>بانتظار المراجعة</b><h2>{submissions.filter(row => row.evaluation_status === 'pending').length}</h2></div>
-            <div className="mini"><b>تم تقييمهم</b><h2>{submissions.filter(row => ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
-            <div className="mini"><b>تم اعتمادهم</b><h2>{submissions.filter(row => row.evaluation_status === 'approved').length}</h2></div>
+            <div className="mini"><b>تم تقييمهم آليًا</b><h2>{submissions.filter(row => row.ai_score !== null && row.ai_score !== undefined && ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status)).length}</h2></div>
+            <div className="mini"><b>اعتماد بشري</b><h2>{submissions.filter(row => row.evaluation_status === 'approved' && row.ai_score !== null && row.ai_score !== undefined).length}</h2></div>
+            <div className="mini"><b>سجلات قديمة تحتاج تدقيقًا</b><h2>{submissions.filter(row => row.evaluation_status === 'approved' && (row.ai_score === null || row.ai_score === undefined)).length}</h2></div>
           </div>
           <p className="muted">الإحصائيات تخص المسابقة المحددة فقط، ولا تشمل مسابقة الأسئلة الأسبوعية.</p>
         </section>
@@ -538,7 +539,7 @@ export default function AdvocacyAdmin() {
         <section className="card">
           <h2>الترتيب الأولي حسب تقييم الذكاء الاصطناعي</h2>
           <p>يعرض أعلى الدرجات المسجلة من 100. لا يُعتمد الترتيب النهائي إلا بعد مراجعة بشرية للمرافعات المرجعية.</p>
-          {submissions.filter(row => row.total_score !== null && row.total_score !== undefined)
+          {submissions.filter(row => row.ai_score !== null && row.ai_score !== undefined && ['evaluated', 'review_required', 'approved'].includes(row.evaluation_status))
             .sort((a, b) => Number(b.total_score) - Number(a.total_score) || new Date(a.submitted_at) - new Date(b.submitted_at))
             .slice(0, 10).length ? (
               submissions.filter(row => row.total_score !== null && row.total_score !== undefined)
@@ -557,7 +558,7 @@ export default function AdvocacyAdmin() {
           <p>تظهر هذه البيانات للمسؤولين فقط. رقم الجوال غير معروض لأن قاعدة البيانات تحفظ بصمته فقط.</p>
           {submissions.length ? submissions.map(row => <article className="review" key={row.id}>
             <b>{row.full_name}</b>
-            <p>الحالة: {row.evaluation_status} · الدرجة: {row.total_score ?? 'بانتظار التقييم'} · وقت الإرسال: {dateLabel(row.submitted_at)}</p>
+            <p>الحالة: {row.evaluation_status === 'approved' && (row.ai_score === null || row.ai_score === undefined) ? 'سجل قديم يحتاج تدقيقًا' : row.evaluation_status} · الدرجة: {row.ai_score ?? 'بانتظار التقييم'} / 100 · وقت الإرسال: {dateLabel(row.submitted_at)}</p>
             <button className="btn secondary" type="button" onClick={() => setSelectedSubmission(row)}>عرض المشاركة</button>
           </article>) : <p>لا توجد مشاركات مسجلة بعد.</p>}
           {selectedSubmission && <article className="review">
