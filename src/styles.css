@@ -497,3 +497,19 @@
 @media(max-width:1000px){.athar-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.gateway-grid{grid-template-columns:1fr}.home-hero-art{min-height:250px}.athar-category-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.athar-dimension-grid{grid-template-columns:1fr}.athar-survey-filter{align-items:stretch;flex-direction:column}.athar-survey-filter select{width:100%}}
+
+
+/* Dedicated Nahj AI assistant entry page */
+.assistant-home-hero{padding:42px 28px;text-align:center;border:1px solid var(--nahj-line);border-radius:22px;background:radial-gradient(ellipse at 50% 0%,rgba(217,189,125,.13),transparent 60%),linear-gradient(145deg,#1b3040,#10212e)}
+.assistant-home-hero h1{font-size:clamp(32px,5vw,48px);margin:13px 0}
+.assistant-home-hero h1 em{font-style:normal;color:var(--nahj-gold)}
+.assistant-home-hero p{color:#b7c2c9;line-height:2;margin:0}
+.assistant-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}
+.assistant-home-card{display:flex;flex-direction:column;min-height:190px;padding:23px;border:1px solid var(--nahj-line);border-radius:17px;background:linear-gradient(145deg,#1b3040,#10212e);transition:border-color .2s,transform .2s}
+.assistant-home-card:hover{border-color:var(--nahj-gold);transform:translateY(-3px)}
+.assistant-home-card>span{font-size:10px;letter-spacing:1.5px;color:var(--nahj-gold)}
+.assistant-home-card h2{font-size:20px;margin:18px 0 5px}
+.assistant-home-card p{font-size:12px;line-height:1.9;color:#b4c0c8}
+.assistant-home-card strong{margin-top:auto;padding-top:13px;color:var(--nahj-gold);font-size:12px}
+.home-hero .hero-emblem.hero-logo{width:142px;height:142px;object-fit:contain;border:0;border-radius:0;box-shadow:none;background:transparent;transform:none}
+@media(max-width:650px){.assistant-home-grid{grid-template-columns:1fr}}

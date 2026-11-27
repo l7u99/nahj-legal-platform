@@ -4,7 +4,7 @@ import { db, ready } from './lib'
 import Archive from './Archive'
 import Advocacy from './Advocacy'
 import AdvocacyAdmin from './AdvocacyAdmin'
-import { ImpactHome, ImpactCategoryDashboard, ImpactPortal, ImpactAdmin, ImpactSurveyAdmin, ImpactSurveyPublic } from './Impact'
+import { ImpactHome, ImpactCategoryDashboard, ImpactPortal, ImpactAssistantHome, ImpactAdmin, ImpactSurveyAdmin, ImpactSurveyPublic } from './Impact'
 
 function Header() {
   return (
@@ -23,6 +23,7 @@ function Header() {
       <nav>
         <Link to="/">الرئيسية</Link>
         <Link to="/competitions">المسابقات</Link>
+        <Link to="/assistant">مساعد نهج الذكي</Link>
       </nav>
     </header>
   )
@@ -74,6 +75,7 @@ function Home() {
             <p>منصة نهج القانوني؛ مساحة للمنافسة والتعلّم، ومنظومة لقياس الأثر والاستدامة وتطوير جودة العمل.</p>
             <div className="home-actions">
               <a className="btn" href="#nahj-gateways">استكشف بوابات نهج ↓</a>
+              <Link className="impact-outline-btn" to="/assistant">افتح مساعد نهج الذكي ←</Link>
             </div>
           </div>
           <div className="home-hero-art" aria-hidden="true">
@@ -1077,6 +1079,7 @@ export default function App() {
   if (path === '/competitions') return <Competitions />
   if (path.startsWith('/rate/')) return <ImpactSurveyPublic token={path.slice('/rate/'.length).split('/')[0]} />
   if (path === '/impact') return <Shell><ImpactHome /></Shell>
+  if (path === '/assistant') return <Shell><ImpactAssistantHome /></Shell>
   if (path === '/impact/meetings' || path === '/impact/teams' || path === '/impact/partners' || path === '/impact/general') return <Shell><ImpactCategoryDashboard category={path.split('/')[2]} /></Shell>
   if (path.startsWith('/impact/assistant/')) return <Shell><ImpactPortal portal={path.slice('/impact/assistant/'.length).split('/')[0]} /></Shell>
   if (path === '/admin/impact/surveys') return <Shell><ImpactSurveyAdmin /></Shell>
