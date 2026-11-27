@@ -431,6 +431,9 @@ function Admin() {
   const [selectedParticipation, setSelectedParticipation] = useState(null)
   const [participationAnswers, setParticipationAnswers] = useState([])
   const [loadingAnswers, setLoadingAnswers] = useState(false)
+  const [aiUsage, setAiUsage] = useState(null)
+  const [aiUsageLoading, setAiUsageLoading] = useState(false)
+  const [aiUsageError, setAiUsageError] = useState('')
 
   useEffect(() => {
     if (!db) return
@@ -456,6 +459,18 @@ function Admin() {
       refresh_token: data.refresh_token
     })
     if (sessionError) setErrorMessage('تعذر إنشاء جلسة المسؤول.')
+  }
+
+  async function loadAiUsage() {
+    setAiUsageLoading(true)
+    setAiUsageError('')
+    const { data, error } = await db.functions.invoke('admin-ai-usage', { body: {} })
+    if (error || !data?.usage) {
+      setAiUsageError(data?.error || 'تعذر تحميل بيانات استهلاك الذكاء الاصطناعي.')
+    } else {
+      setAiUsage(data)
+    }
+    setAiUsageLoading(false)
   }
 
   async function loadSets() {
@@ -615,6 +630,7 @@ function Admin() {
     if (session) {
       loadParticipations()
       loadTopTen()
+      loadAiUsage()
     }
   }, [session, sets])
 
@@ -774,6 +790,22 @@ function Admin() {
               <h2>منظومة قياس الأثر والاستدامة</h2>
               <p>استعراض التقارير المحفوظة ومتابعة مراجعتها وأرشفتها.</p>
               <Link className="btn" to="/admin/impact">فتح سجل تقارير الأثر ←</Link>
+            </section>
+            <section className="card">
+              <div className="actions" style={{justifyContent:'space-between',alignItems:'center'}}>
+                <h2>استهلاك الذكاء الاصطناعي للمرافعات</h2>
+                <button type="button" className="mini" onClick={loadAiUsage} disabled={aiUsageLoading}>تحديث</button>
+              </div>
+              {aiUsageLoading ? <Note>جارٍ تحميل بيانات الاستهلاك…</Note> : aiUsageError ? <Note>{aiUsageError}</Note> : aiUsage ? (
+                <div className="impact-admin-stats">
+                  <div><strong>{aiUsage.usage.request_count.toLocaleString('ar-SA')}</strong><span>طلبات هذا الشهر</span></div>
+                  <div><strong>{aiUsage.monthly_limit ? aiUsage.monthly_limit.toLocaleString('ar-SA') : '—'}</strong><span>السقف الشهري</span></div>
+                  <div><strong>{(aiUsage.usage.actual_input_tokens || 0).toLocaleString('ar-SA')}</strong><span>رموز الإدخال</span></div>
+                  <div><strong>{(aiUsage.usage.actual_output_tokens || 0).toLocaleString('ar-SA')}</strong><span>رموز الإخراج</span></div>
+                </div>
+              ) : <Note>لا توجد بيانات استهلاك بعد.</Note>}
+              {aiUsage && !aiUsage.configured && <Note>التقييم الآلي متوقف حتى يتم تحديد سقف ADVOCACY_AI_MONTHLY_LIMIT في إعدادات Supabase.</Note>}
+              {aiUsage?.usage?.failed_count > 0 && <p className="muted">محاولات تعذر تقييمها هذا الشهر: {aiUsage.usage.failed_count}</p>}
             </section>
             <section className="card">
               <h2>إدارة المرافعة القانونية</h2>
