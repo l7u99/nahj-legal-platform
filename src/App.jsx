@@ -853,7 +853,8 @@ function Admin() {
                 {aiUsage.impact_usage.failed_count > 0 && <p className="muted">طلبات مساعد أثَر المتعثرة هذا الشهر: {aiUsage.impact_usage.failed_count}</p>}
               </>}
             </section>
-            <QuestionsAssistant />\n            <section className="card">
+            <QuestionsAssistant />
+            <section className="card">
               <h2>إدارة المرافعة القانونية</h2>
               <p>إدارة مستقلة لقضايا المرافعة ومراحلها وسجل متسابقيها.</p>
               <Link className="btn" to="/admin/advocacy">فتح إدارة المرافعة ←</Link>
