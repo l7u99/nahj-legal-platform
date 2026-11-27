@@ -11,7 +11,7 @@ function Header() {
     <header>
       <Link to="/" className="brand">
         <img
-          src={`${import.meta.env.BASE_URL}nahj-logo.png`}
+          src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`}
           alt="شعار نهج القانوني"
           style={{ width: 76, height: 76, objectFit: 'contain', borderRadius: 12 }}
         />
@@ -89,7 +89,7 @@ function Home() {
           </div>
           <div className="home-hero-art" aria-hidden="true">
             <div className="hero-ring ring-a" /><div className="hero-ring ring-b" />
-            <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
+            <img className="hero-emblem hero-logo" src={`${import.meta.env.BASE_URL}nahj-logo.png?v=20261127`} alt="شعار نهج القانوني" /><span className="hero-art-caption">NAHJ · 2026</span>
           </div>
         </section>
         <section className="home-section-head">
