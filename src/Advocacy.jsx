@@ -481,13 +481,13 @@ export default function Advocacy() {
               <strong>حالة المشاركة:</strong>
               <p>تم استلام المرافعة بنجاح (submitted).</p>
               <p>
-                <strong>درجتك النهائية:</strong> {result.total_score ?? '—'} / 25
-              </p>
-              <p>
                 <strong>درجة المراحل الموضوعية:</strong> {result.objective_score ?? 0} / 15
               </p>
               <p>
-                <strong>درجة المرافعة:</strong> 10 / 10
+                <strong>حالة المرافعة:</strong> بانتظار المراجعة والتدقيق
+              </p>
+              <p>
+                <strong>الدرجة النهائية:</strong> لم تُعتمد بعد
               </p>
             </div>
 
