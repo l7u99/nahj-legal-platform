@@ -245,6 +245,38 @@ export function ImpactCategoryDashboard({ category }) {
   )
 }
 
+export function ImpactAssistantHome() {
+  const access = useImpactAccess()
+  if (!access.allowed) return <ImpactAccessNotice loading={access.loading} />
+  const destinations = [
+    { id: 'meetings', number: '01', title: 'مساعد اللقاءات والفعاليات', description: 'تحليل جودة اللقاءات وقياس تحقق الأهداف والمخرجات.' },
+    { id: 'teams', number: '02', title: 'مساعد الفرق والأعضاء', description: 'قراءة الأداء والإنجاز والتعاون وفرص التطوير.' },
+    { id: 'partners', number: '03', title: 'مساعد الشراكات', description: 'تحليل قيمة الشراكة وجودة التعاون والأثر المشترك.' },
+    { id: 'general', number: '04', title: 'مساعد التقييمات العامة', description: 'تحليل نتائج الاستبيانات والرضا وفرص التحسين.' }
+  ]
+  return (
+    <main className="impact-page assistant-home">
+      <div className="impact-breadcrumb"><Link to="/">الرئيسية</Link><span>/</span><b>مساعد نهج الذكي</b></div>
+      <section className="assistant-home-hero">
+        <span className="eyebrow">NAHJ LEGAL · AI ASSISTANT</span>
+        <h1>مساعد <em>نهج الذكي</em></h1>
+        <p>مساحة مستقلة للوصول السريع إلى المساعد الذكي واختيار مجال التحليل المناسب.</p>
+      </section>
+      <section className="assistant-home-grid">
+        {destinations.map(item => (
+          <Link className="assistant-home-card" key={item.id} to={'/impact/assistant/' + item.id}>
+            <span>{item.number} / NAHJ AI</span>
+            <h2>{item.title}</h2>
+            <p>{item.description}</p>
+            <strong>ابدأ المحادثة ←</strong>
+          </Link>
+        ))}
+      </section>
+      <div className="impact-back"><Link to="/">← العودة إلى الرئيسية</Link></div>
+    </main>
+  )
+}
+
 export function ImpactPortal({ portal: requestedPortal }) {
   const access = useImpactAccess()
   const portal = portalInfo[requestedPortal] ? requestedPortal : 'meetings'
