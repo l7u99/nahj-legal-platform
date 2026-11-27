@@ -41,6 +41,10 @@ create policy "published and archived options public read"
     )
   );
 
+-- The public API role needs read-only base-table privileges for invoker-security views.
+revoke all on public.question_sets, public.questions, public.options from anon;
+grant select on public.question_sets, public.questions, public.options to anon;
+
 -- PostgreSQL 15+ security_invoker ensures the caller's RLS policies apply to view rows.
 alter view public.archived_question_answers set (security_invoker = true, security_barrier = true);
 alter view public.public_options set (security_invoker = true, security_barrier = true);
