@@ -387,6 +387,47 @@ function Participate() {
   )
 }
 
+
+function QuestionsAssistant() {
+  const [messages, setMessages] = useState([{ role: 'assistant', content: 'مرحبًا! أنا مساعد دقيقة قانونية. أستطيع الإجابة عن الأسئلة والخيارات والإجابات الصحيحة ونتائج المشاركات والإحصائيات من بيانات المنصة.' }])
+  const [draft, setDraft] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  async function send(event) {
+    event.preventDefault()
+    const question = draft.trim()
+    if (!question || busy) return
+    const next = [...messages, { role: 'user', content: question }]
+    setMessages(next); setDraft(''); setBusy(true); setError('')
+    try {
+      const { data, error: invokeError } = await db.functions.invoke('questions-assistant', { body: { messages: next } })
+      if (invokeError || !data?.reply) throw new Error(data?.error || invokeError?.message || 'تعذر الحصول على رد.')
+      setMessages([...next, { role: 'assistant', content: data.reply }])
+    } catch (err) { setError(err.message || 'تعذر الاتصال بالمساعد.') }
+    finally { setBusy(false) }
+  }
+  return (
+    <section className="card" style={{ borderColor: 'rgba(217,189,125,.55)' }}>
+      <div className="actions" style={{justifyContent:'space-between',alignItems:'center'}}>
+        <div><span className="gold">NAHJ AI · QUIZ INSIGHTS</span><h2 style={{margin:'7px 0'}}>مساعد الأسئلة الذكي</h2><small className="muted">متصل ببيانات الأسئلة والإجابات والإحصائيات الفعلية</small></div>
+        <span className="mini">AI</span>
+      </div>
+      <div aria-live="polite" style={{display:'grid',gap:10,maxHeight:360,overflowY:'auto',padding:'14px 0'}}>
+        {messages.map((message,index) => <div key={index} style={{justifySelf:message.role==='user'?'end':'start',maxWidth:'92%',padding:12,borderRadius:11,background:message.role==='user'?'rgba(217,189,125,.13)':'#203747',whiteSpace:'pre-wrap',fontSize:13,lineHeight:1.9}}>
+          <small className="gold" style={{display:'block',marginBottom:4}}>{message.role==='user'?'أنت':'مساعد دقيقة قانونية'}</small>{message.content}
+        </div>)}
+        {busy && <Note>جارٍ تحليل بيانات الأسئلة والإحصائيات…</Note>}
+      </div>
+      {error && <Note>{error}</Note>}
+      <form onSubmit={send} style={{display:'flex',gap:9,flexWrap:'wrap'}}>
+        <input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="اسأل عن الأسئلة أو الإجابات أو الإحصائيات…" style={{flex:'1 1 260px'}} disabled={busy}/>
+        <button className="btn" disabled={busy || !draft.trim()}>{busy?'جارٍ التحليل…':'إرسال السؤال'}</button>
+      </form>
+      <small className="muted" style={{display:'block',marginTop:9}}>لا تُرسل أسماء المشاركين أو أرقام جوالاتهم إلى خدمة الذكاء الاصطناعي.</small>
+    </section>
+  )
+}
+
 function Admin() {
   const [session, setSession] = useState(null)
   const [username, setUsername] = useState('')
@@ -806,7 +847,7 @@ function Admin() {
                 {aiUsage.impact_usage.failed_count > 0 && <p className="muted">طلبات مساعد أثَر المتعثرة هذا الشهر: {aiUsage.impact_usage.failed_count}</p>}
               </>}
             </section>
-            <section className="card">
+            <QuestionsAssistant />\n            <section className="card">
               <h2>إدارة المرافعة القانونية</h2>
               <p>إدارة مستقلة لقضايا المرافعة ومراحلها وسجل متسابقيها.</p>
               <Link className="btn" to="/admin/advocacy">فتح إدارة المرافعة ←</Link>
