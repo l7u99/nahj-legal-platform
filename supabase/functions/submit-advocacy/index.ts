@@ -31,8 +31,6 @@ function getServiceKey(): string {
   throw new Error("Supabase service key is missing");
 }
 
-// تم إيقاف التقييم بالذكاء الاصطناعي مؤقتًا.
-// نحتفظ بدالة evaluate-advocacy مستقلة للمستقبل.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -117,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { data: existing, error: existingError } = await supabase
       .from("advocacy_submissions")
-      .select("id,evaluation_status,total_score,objective_score")
+      .select("id,evaluation_status,total_score,objective_score,ai_score,ai_feedback,submitted_at,duration_seconds")
       .eq("attempt_id", attemptId)
       .maybeSingle();
 
@@ -127,48 +125,25 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    // معالجة المشاركة المحفوظة سابقًا دون إنشاء مشاركة مكررة.
+    // لا نعيد تقييم المشاركة أو نغيّر درجاتها عند إعادة الطلب.
     if (existing) {
-      const objectiveScore = Number(existing.objective_score || 0);
-      const totalScore = objectiveScore + 10;
+      if (attempt.status === "started") {
+        const { error: attemptUpdateError } = await supabase
+          .from("advocacy_attempts")
+          .update({
+            status: "submitted",
+            completed_at: existing.submitted_at,
+            duration_seconds: existing.duration_seconds,
+          })
+          .eq("id", attemptId)
+          .eq("status", "started");
 
-      const { error: existingUpdateError } = await supabase
-        .from("advocacy_submissions")
-        .update({
-          evaluation_status: "approved",
-          total_score: totalScore,
-        })
-        .eq("id", existing.id);
-
-      if (existingUpdateError) {
-        console.error("Existing submission update error:", existingUpdateError);
-        return response({
-          error: "تعذر تحديث حالة المشاركة السابقة",
-        }, 500);
-      }
-
-      // تحديث جميع الحقول المطلوبة لقيد حالة المحاولة.
-      const startedAt = new Date(attempt.started_at).getTime();
-
-      const durationSeconds = Math.max(
-        0,
-        Math.floor((Date.now() - startedAt) / 1000),
-      );
-
-      const { error: attemptUpdateError } = await supabase
-        .from("advocacy_attempts")
-        .update({
-          status: "submitted",
-          completed_at: new Date().toISOString(),
-          duration_seconds: durationSeconds,
-        })
-        .eq("id", attemptId);
-
-      if (attemptUpdateError) {
-        console.error("Attempt update error:", attemptUpdateError);
-        return response({
-          error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
-        }, 500);
+        if (attemptUpdateError) {
+          console.error("Attempt update error:", attemptUpdateError);
+          return response({
+            error: "تم حفظ المشاركة، لكن تعذر تحديث حالة المحاولة",
+          }, 500);
+        }
       }
 
       return response({
@@ -176,10 +151,12 @@ Deno.serve(async (req) => {
         already_submitted: true,
         submission_id: existing.id,
         status: "submitted",
-        evaluation_status: "approved",
-        objective_score: objectiveScore,
-        advocacy_score: 10,
-        total_score: totalScore,
+        evaluation_status: existing.evaluation_status,
+        objective_score: Number(existing.objective_score || 0),
+        ai_score: existing.ai_score,
+        ai_feedback: existing.ai_feedback,
+        total_score: existing.total_score,
+        message: "سبق استلام مشاركتك وحُفظت بنجاح.",
       });
     }
 
@@ -189,7 +166,7 @@ Deno.serve(async (req) => {
 
     const { data: stages, error: stagesError } = await supabase
       .from("advocacy_stages")
-      .select("id,stage_number,points,stage_type,options")
+      .select("id,stage_number,title,prompt,points,stage_type,options")
       .eq("case_id", attempt.case_id)
       .order("position", { ascending: true });
 
@@ -199,25 +176,45 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
-    const multipleChoiceStages = stages.filter(
-      (stage: any) => stage.stage_type === "multiple_choice",
-    );
-
     const finalStage = stages.find(
       (stage: any) =>
         stage.stage_type === "written_argument" ||
-        stage.stage_number === 4,
+        Number(stage.stage_number) === 4,
+    );
+    const multipleChoiceStages = stages.filter(
+      (stage: any) => ["multiple_choice", "choice"].includes(stage.stage_type),
     );
 
     if (!finalStage || multipleChoiceStages.length !== 3) {
-      return response({
-        error: "إعداد مراحل المسابقة غير مكتمل",
-      }, 500);
+      return response({ error: "إعداد مراحل المسابقة غير مكتمل" }, 500);
     }
 
-    const stageIds = multipleChoiceStages.map(
-      (stage: any) => stage.id,
-    );
+    // Validate every required stage on the server; client-side checks are not trusted.
+    const knownStageIds = new Set(stages.map((stage: any) => stage.id));
+    for (const answerId of Object.keys(answers)) {
+      if (!knownStageIds.has(answerId)) {
+        return response({ error: "تتضمن المشاركة إجابات لمراحل غير معتمدة." }, 400);
+      }
+    }
+    for (const stage of stages) {
+      if (stage.id === finalStage.id) continue;
+      const answer = answers[stage.id];
+      if (["multiple_choice", "choice"].includes(stage.stage_type)) {
+        const options = Array.isArray(stage.options) ? stage.options : [];
+        const selectedIndex = typeof answer === "number"
+          ? answer
+          : answer?.selected_option_index ?? answer?.option_index ?? answer?.selectedOptionIndex;
+        if (selectedIndex === undefined || selectedIndex === null ||
+            !Number.isInteger(Number(selectedIndex)) ||
+            Number(selectedIndex) < 0 || Number(selectedIndex) >= options.length) {
+          return response({ error: `يرجى تقديم إجابة صحيحة للمرحلة ${stage.stage_number}.` }, 400);
+        }
+      } else if (typeof answer !== "string" || answer.trim().length < 3) {
+        return response({ error: `يرجى كتابة إجابة المرحلة ${stage.stage_number}.` }, 400);
+      }
+    }
+
+    const stageIds = multipleChoiceStages.map((stage: any) => stage.id);
 
     const { data: answerKeys, error: keysError } = await supabase
       .from("advocacy_stage_answers")
@@ -298,10 +295,6 @@ Deno.serve(async (req) => {
       Math.floor((Date.now() - startedAt) / 1000),
     );
 
-    // المرافعة تستحق 10 درجات عند استيفاء شروط التسليم.
-    const advocacyScore = 10;
-    const totalScore = objectiveScore + advocacyScore;
-
     const { data: submission, error: insertError } = await supabase
       .from("advocacy_submissions")
       .insert({
@@ -312,8 +305,8 @@ Deno.serve(async (req) => {
         answers,
         final_argument: finalArgument,
         objective_score: objectiveScore,
-        total_score: totalScore,
-        evaluation_status: "approved",
+        total_score: null,
+        evaluation_status: "pending",
         submitted_at: new Date().toISOString(),
         started_at: attempt.started_at,
         duration_seconds: durationSeconds,
@@ -327,6 +320,12 @@ Deno.serve(async (req) => {
         error: "تعذر حفظ المشاركة",
       }, 500);
     }
+
+    // Automated scoring is intentionally disabled. Submissions remain pending for human review.
+    const finalEvaluationStatus = "pending";
+    const finalAiScore: number | null = null;
+    const finalTotalScore: number | null = null;
+    const finalAiFeedback: Record<string, unknown> | null = null;
 
     const { error: attemptUpdateError } = await supabase
       .from("advocacy_attempts")
@@ -347,13 +346,15 @@ Deno.serve(async (req) => {
 
     return response({
       success: true,
-      message: "تم استلام مشاركتك وحفظها بنجاح",
       status: "submitted",
       submission_id: submission.id,
       objective_score: objectiveScore,
-      advocacy_score: advocacyScore,
-      total_score: totalScore,
-      evaluation_status: "approved",
+      ai_score: finalAiScore,
+      ai_feedback: finalAiFeedback,
+      total_score: finalTotalScore,
+      evaluation_status: finalEvaluationStatus,
+      evaluation_pending_reason: "تم حفظ المشاركة، وستُراجع المرافعة بشريًا قبل اعتماد النتائج.",
+      message: "تم استلام المشاركة بنجاح، وستُراجع المرافعة بشريًا.",
     });
 
   } catch (error) {
