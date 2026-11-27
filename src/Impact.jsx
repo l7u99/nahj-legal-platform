@@ -168,7 +168,8 @@ export function ImpactHome() {
   const categories = [
     { id: 'meetings', number: '01', title: 'تقييم اللقاءات والفعاليات', desc: 'جودة اللقاء والتنظيم ورضا الحضور وقياس المخرجات.' },
     { id: 'teams', number: '02', title: 'تقييم الأعضاء وفريق العمل', desc: 'الأداء والإنجاز والالتزام والتعاون والتطوير.' },
-    { id: 'partners', number: '03', title: 'تقييم الشركاء', desc: 'جودة الشراكات والقيمة المضافة والأثر المشترك.' }
+    { id: 'partners', number: '03', title: 'تقييم الشركاء', desc: 'جودة الشراكات والقيمة المضافة والأثر المشترك.' },
+    { id: 'general', number: '04', title: 'التقييمات العامة', desc: 'استبيانات عامة ومؤشرات رضا وتجربة لا ترتبط بمجال محدد.' }
   ]
   return (
     <main className="impact-page athar-dashboard">
@@ -207,9 +208,11 @@ export function ImpactCategoryDashboard({ category }) {
   const active = surveys.filter(item => item.status === 'published').length
   const monthly = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5-index)); return { key: date.getFullYear() + '-' + date.getMonth(), label: date.toLocaleDateString('ar-SA', { month: 'short' }), total: responses.filter(row => { const d = new Date(row.submitted_at); return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() }).length } })
   const maxMonthly = Math.max(1, ...monthly.map(item => item.total))
-  const questionResults = data.questions.filter(q => surveyIds.has(q.survey_id) && q.question_type === 'rating').map(question => {
-    const values = responses.map(row => Number((row.answers || {})[question.id])).filter(value => Number.isFinite(value))
-    return { ...question, average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0, count: values.length }
+  const questionResults = data.questions.filter(q => surveyIds.has(q.survey_id)).map(question => {
+    const values = responses.map(row => (row.answers || {})[question.id]).filter(value => value !== undefined && value !== null && value !== '')
+    const ratings = values.map(Number).filter(value => Number.isFinite(value) && value >= 1 && value <= 5)
+    const choices = question.question_type === 'choice' ? (question.options || []).map(option => ({ option, count: values.filter(value => value === option).length })) : []
+    return { ...question, average: ratings.length ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length : 0, count: values.length, ratingsCount: ratings.length, choices, textAnswers: question.question_type === 'text' ? values.slice(-8).reverse() : [] }
   })
   return (
     <main className="impact-page athar-dashboard">
@@ -226,7 +229,7 @@ export function ImpactCategoryDashboard({ category }) {
       <section className="athar-panel"><div className="athar-bar-chart">{monthly.map(item => <div className="athar-bar-column" key={item.key}><strong>{data.loading ? '—' : item.total}</strong><div className="athar-bar-track"><i style={{ height: data.loading ? '0%' : (item.total / maxMonthly * 100) + '%' }} /></div><small>{item.label}</small></div>)}</div>{!data.loading && responses.length === 0 && <div className="athar-chart-empty">بانتظار أول استجابة لهذا المجال؛ ستظهر حركة التقييم هنا.</div>}</section>
       <section className="athar-dashboard-section-head"><div><span className="eyebrow">INDICATOR BREAKDOWN</span><h2>نتائج مؤشرات التقييم</h2></div><span className="athar-panel-unit">متوسط من 5</span></section>
       <section className="athar-indicator-list">
-        {questionResults.length ? questionResults.map((item, index) => <article className="athar-indicator-row" key={item.id}><div><small>مؤشر {String(index + 1).padStart(2, '0')}</small><h3>{item.prompt}</h3><span>{item.count.toLocaleString('ar-SA')} إجابة</span></div><strong>{item.count ? item.average.toFixed(1) : '0.0'}<small> / 5</small></strong><div className="athar-indicator-track"><i style={{ width: (item.average / 5 * 100) + '%' }} /></div></article>) : <div className="athar-chart-empty">لا توجد أسئلة تقييم رقمية في هذا المجال حتى الآن.</div>}
+        {questionResults.length ? questionResults.map((item, index) => <article className="athar-indicator-row" key={item.id}><div><small>مؤشر {String(index + 1).padStart(2, '0')} · {item.question_type === 'rating' ? 'تقييم رقمي' : item.question_type === 'choice' ? 'اختيار من متعدد' : 'إجابة نصية'}</small><h3>{item.prompt}</h3><span>{item.count.toLocaleString('ar-SA')} إجابة</span></div>{item.question_type === 'rating' ? <><strong>{item.ratingsCount ? item.average.toFixed(1) : '0.0'}<small> / 5</small></strong><div className="athar-indicator-track"><i style={{ width: (item.average / 5 * 100) + '%' }} /></div></> : item.question_type === 'choice' ? <div className="athar-choice-breakdown">{item.choices.map(choice => <div key={choice.option}><span>{choice.option}</span><b>{choice.count.toLocaleString('ar-SA')}</b><i style={{ width: (item.count ? choice.count / item.count * 100 : 0) + '%' }} /></div>)}</div> : <div className="athar-text-responses">{item.textAnswers.length ? item.textAnswers.map((answer, answerIndex) => <p key={answerIndex}>“{answer}”</p>) : <small>لا توجد إجابات نصية بعد.</small>}</div>}</article>) : <div className="athar-chart-empty">لا توجد أسئلة في هذا المجال حتى الآن.</div>}
       </section>
       <section className="athar-next-step"><div><span className="eyebrow">NEXT STEP</span><h2>{surveys.length ? 'طوّري أدوات القياس باستمرار' : 'ابدئي بإنشاء أول استبيان لهذا المجال'}</h2><p>أنشئي استبيانًا مرتبطًا بهذا المجال لتجميع بيانات قابلة للمقارنة وتحليلها.</p></div><Link className="impact-primary" to="/admin/impact/surveys">إدارة الاستبيانات ←</Link></section>
     </main>
