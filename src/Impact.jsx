@@ -471,7 +471,7 @@ export function ImpactAdmin() {
               {selected.status !== 'draft' && <button type="button" className="impact-outline-btn" onClick={() => changeStatus(selected,'draft')}>إعادته لمسودة</button>}
               <button type="button" className="impact-outline-btn" onClick={() => window.print()}>طباعة التقرير</button>
             </div>
-          </> : <div className="impact-admin-empty"><span>✧</span><h2>اختاري تقريرًا</h2><p>ستظهر تفاصيل التقرير ومؤشراته وتوصياته هنا.</p></div>}
+          </> : <div className="impact-admin-empty"><span>✧</span><h2>اختار تقريرًا</h2><p>ستظهر تفاصيل التقرير ومؤشراته وتوصياته هنا.</p></div>}
         </div>
       </section>
       <div className="impact-back"><Link to="/admin">← العودة إلى لوحة الإدارة</Link></div>
