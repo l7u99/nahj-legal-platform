@@ -34,23 +34,32 @@ Deno.serve(async (req) => {
     const monthStart = new Date()
     monthStart.setUTCDate(1)
     monthStart.setUTCHours(0, 0, 0, 0)
-    const { data: usage, error: usageError } = await admin.from("advocacy_ai_usage")
-      .select("month_start,request_count,estimated_input_tokens,actual_input_tokens,actual_output_tokens,failed_count,updated_at")
-      .eq("month_start", monthStart.toISOString().slice(0, 10))
-      .maybeSingle()
-    if (usageError) return json({ error: "تعذر تحميل إحصائيات الاستهلاك. تأكدي من تطبيق ترحيل قاعدة البيانات." }, 503)
+    const impactLimit = Number(Deno.env.get("IMPACT_AI_MONTHLY_LIMIT") || 0)
+    const [{ data: usage, error: usageError }, { data: impactUsage, error: impactUsageError }] = await Promise.all([
+      admin.from("advocacy_ai_usage")
+        .select("month_start,request_count,estimated_input_tokens,actual_input_tokens,actual_output_tokens,failed_count,updated_at")
+        .eq("month_start", monthStart.toISOString().slice(0, 10)).maybeSingle(),
+      admin.from("impact_ai_usage")
+        .select("month_start,request_count,estimated_input_tokens,actual_input_tokens,actual_output_tokens,failed_count,updated_at")
+        .eq("month_start", monthStart.toISOString().slice(0, 10)).maybeSingle(),
+    ])
+    if (usageError || impactUsageError) return json({ error: "تعذر تحميل إحصائيات الاستهلاك. تأكدي من تطبيق ترحيل قاعدة البيانات." }, 503)
 
+    const emptyUsage = {
+      month_start: monthStart.toISOString().slice(0, 10),
+      request_count: 0,
+      estimated_input_tokens: 0,
+      actual_input_tokens: 0,
+      actual_output_tokens: 0,
+      failed_count: 0,
+    }
     return json({
       monthly_limit: Number.isInteger(limit) && limit > 0 ? limit : null,
       configured: Number.isInteger(limit) && limit > 0,
-      usage: usage || {
-        month_start: monthStart.toISOString().slice(0, 10),
-        request_count: 0,
-        estimated_input_tokens: 0,
-        actual_input_tokens: 0,
-        actual_output_tokens: 0,
-        failed_count: 0,
-      },
+      usage: usage || emptyUsage,
+      impact_monthly_limit: Number.isInteger(impactLimit) && impactLimit > 0 ? impactLimit : null,
+      impact_configured: Number.isInteger(impactLimit) && impactLimit > 0,
+      impact_usage: impactUsage || emptyUsage,
     })
   } catch (error) {
     console.error("admin-ai-usage error", error)
