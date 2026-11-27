@@ -176,8 +176,9 @@ export function ImpactHome() {
   )
 }
 
-export function ImpactPortal({ portal }) {
+export function ImpactPortal({ portal: requestedPortal }) {
   const access = useImpactAccess()
+  const portal = portalInfo[requestedPortal] ? requestedPortal : 'meetings'
   const info = portalInfo[portal]
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
